@@ -6,7 +6,7 @@
 // Later genres: classical (romantic, impressionist), jazz, soundscape.
 export default {
   id: 'materials', name: 'Materials',
-  mats: ['Liquid metal', 'Strawberry', 'Clay', 'Glass', 'Cloud', 'Slime'],   // shown as Metal, Cream, Clay, Glass, Cloud, Slime; the colour picker tints them (v28)
+  mats: ['Liquid metal', 'Brushed metal', 'Strawberry', 'Clay', 'Wax', 'Rubber', 'Pearl', 'Glass', 'Cloud', 'Slime'],   // shown as Metal, Brushed, Cream, Clay, Wax, Rubber, Pearl, Glass, Cloud, Slime; the colour picker tints them
   colors: ['#aab1ba', '#e2b24a', '#f39bbd', '#f08a5c', '#f7da7a', '#79c832', '#94ddc6', '#98bff0', '#b79cf0', '#eef1f6'],
   tools: ['glow', 'beads', 'erase'],
   modes: ['free', 'tiles'],

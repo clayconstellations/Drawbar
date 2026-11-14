@@ -16,15 +16,15 @@ import { nodes } from './signal.js';
 import { screentone, brushInk } from './comic.js';
 import { solids, lineMats, underMats } from './signal.js';
 import { microMats } from './micro.js';
-import { clay, glass } from './realistic.js';
+import { clay, glass, wax, pearl, brushed, rubber } from './realistic.js';
 
 // New materials are only ever appended: a stroke stores its material as an index into this list (clips depend on it)
 export const MATS = [liquidMetal, ...creams, ...comics, comicCloud, inkHatch, ...drips, softCloud, slimeMat, flowerVine,
-  ...pixels, ...shapes, ...neons, ...sprays, ...flats, ...glyphMats, ...plants, ...signals, ...spaceMats, pop, nodes, screentone, brushInk, solids, ...lineMats, ...underMats, ...microMats, clay, glass];
+  ...pixels, ...shapes, ...neons, ...sprays, ...flats, ...glyphMats, ...plants, ...signals, ...spaceMats, pop, nodes, screentone, brushInk, solids, ...lineMats, ...underMats, ...microMats, clay, glass, wax, pearl, brushed, rubber];
 export const matIndex = name => { const i = MATS.findIndex(m => m.name === name); if (i < 0) throw new Error('No material ' + name); return i; };
 for (const M of MATS) { M.ops = M.make();
   // Moving strokes are redrawn every frame, so they use crisp layers instead of the costly blurred ones
-  M.animOps = M.ops.filter(o => typeof o.k !== 'string').map(o => o.t === 'drop' ? { ...o, hard: true, a: o.a * 0.6 } : o.blur ? { ...o, blur: 0 } : o); M.ks = [...new Set(M.ops.filter(o => typeof o.k === 'number').map(o => o.k).concat(1))]; M.cost = M.ops.reduce((a, o) => a + (o.blur || o.t === 'drop' ? 4 : 1), 0); M.light = tint(M.accent, 0.6);
+  M.animOps = M.ops.filter(o => typeof o.k !== 'string').map(o => o.t === 'drop' ? { ...o, hard: true, a: o.a * 0.6 } : o.blur ? { ...o, blur: 0 } : o); M.ks = [...new Set(M.ops.filter(o => typeof o.k === 'number').map(o => o.k).concat(M.ops.filter(o => o.k0).map(o => o.k0), 1))]; M.cost = M.ops.reduce((a, o) => a + (o.blur || o.t === 'drop' ? 4 : 1), 0); M.light = tint(M.accent, 0.6);
   // Lit: the look depends on where the light is (layers slid toward it, drop shadows). Only lit strokes need re-lighting
   // while the picture turns; flat, glyph and garden materials just turn with the picture.
   M.lit = M.ops.some(o => o.t === 'drop' || !!o.off); }

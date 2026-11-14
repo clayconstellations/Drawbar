@@ -81,6 +81,7 @@ export function localLight(c) {
   return [vx / h, vy / h];
 }
 export const BIG = 9000;
+let rimC = null, rimX = null;
 export function drawShape(c, sh, ops) {
   const [lx, ly] = localLight(c), w0 = sh.w0;
   let far = null, scale = 1;
@@ -92,6 +93,25 @@ export function drawShape(c, sh, ops) {
       // Paint: the paper's tooth shows through the ink as fine specks and uneven patches. It is cut out of the
       // stroke's own sprite (so nothing beneath is touched); where strokes are drawn straight to the layer it is skipped.
       if (c.sprite && sh.paths.br) { c.globalCompositeOperation = 'destination-out'; c.globalAlpha = 1; c.fillStyle = toothPattern(c); c.fill(sh.paths.br); c.globalCompositeOperation = 'source-over'; }
+      continue;
+    }
+    if (o.t === 'rim') {
+      // A hard-edged band (Glass): the outline at k0 with the outline at k cut out of it. Cutting needs a canvas of
+      // its own, or it would cut the picture beneath; a spare one, only as big as the stroke, is reused.
+      const p0 = sh.paths[o.k0], p1 = sh.paths[o.k]; if (!p0 || !p1) continue;
+      const m = c.getTransform(), b = sh.bb; let x0 = 0, y0 = 0, x1 = c.canvas.width, y1 = c.canvas.height;
+      if (b) {
+        let ax = 1e9, ay = 1e9, bx = -1e9, by = -1e9;
+        for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const px = m.a * x + m.c * y + m.e, py = m.b * x + m.d * y + m.f; ax = Math.min(ax, px); bx = Math.max(bx, px); ay = Math.min(ay, py); by = Math.max(by, py); }
+        x0 = Math.max(x0, Math.floor(ax) - 2); y0 = Math.max(y0, Math.floor(ay) - 2); x1 = Math.min(x1, Math.ceil(bx) + 2); y1 = Math.min(y1, Math.ceil(by) + 2);
+      }
+      const w = x1 - x0, h = y1 - y0; if (w < 1 || h < 1) continue;
+      if (!rimC) { rimC = document.createElement('canvas'); rimX = rimC.getContext('2d'); }
+      if (rimC.width < w || rimC.height < h) { rimC.width = Math.max(rimC.width, w); rimC.height = Math.max(rimC.height, h); }
+      rimX.setTransform(1, 0, 0, 1, 0, 0); rimX.globalCompositeOperation = 'source-over'; rimX.clearRect(0, 0, w, h);
+      rimX.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0); rimX.fillStyle = o.c; rimX.fill(p0);
+      rimX.globalCompositeOperation = 'destination-out'; rimX.fillStyle = '#000'; rimX.fill(p1);
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = o.a; c.drawImage(rimC, 0, 0, w, h, x0, y0, w, h); c.restore();
       continue;
     }
     if (o.t === 'grain') { if (sh.paths.all) { c.globalAlpha = o.a; c.fillStyle = grainPattern(c); c.fill(sh.paths.all); c.globalAlpha = 1; } continue; }

@@ -34,18 +34,53 @@ const dust = v => make('dust' + v, g => {
   for (let i = 0; i < 5; i++) { const a = r() * TAU, d = r() * SZ * 0.2; rg(g, SZ / 2 + Math.cos(a) * d, SZ / 2 + Math.sin(a) * d, SZ * (0.2 + 0.16 * r()), [[0, 'rgba(6,5,12,0.55)'], [0.6, 'rgba(6,5,12,0.2)'], [1, 'rgba(6,5,12,0)']]); }
 });
 // A small planet. Always upright and lit from the upper left, so every planet in the picture agrees about where the
-// light is (v28: they used to be turned at random, which is much of why they looked pasted in). Soft edge, a dark
-// side that is not quite black, a thin bright limb on the lit side and a faint haze around it.
-const planet = color => make('planet' + color, g => {
-  const c = SZ / 2, R = SZ * 0.3;
-  rg(g, c, c, SZ * 0.5, [[0, rgba(color, 0.16)], [0.6, rgba(color, 0.1)], [0.8, rgba(color, 0.03)], [1, rgba(color, 0)]]);   // haze
+// light is. Three kinds (v29), each in two variants: gas giants (uneven bands that bow with the globe, sometimes a
+// storm), rocky (blotches and craters) and icy (pale, with bright cracks). The disc fades out over its last tenth,
+// like something a little out of focus, and a faint haze sits around it.
+const planet = (color, kind = 0, v = 0) => make('planet' + color + kind + v, g => {
+  const c = SZ / 2, R = SZ * 0.3, r = mulberry32(hash32(kind, v, 311)), [cr, cg, cb] = hexRgb(color);
+  const mixc = (k, a) => `rgba(${Math.round(cr + (k > 0 ? 255 - cr : cr) * k)},${Math.round(cg + (k > 0 ? 255 - cg : cg) * k)},${Math.round(cb + (k > 0 ? 255 - cb : cb) * k)},${a})`;
   g.save(); g.beginPath(); g.arc(c, c, R, 0, TAU); g.clip();
-  rg(g, c - R * 0.55, c - R * 0.6, R * 2.1, [[0, '#f4f0ea'], [0.12, color], [0.42, rgba(color, 0.55)], [0.62, 'rgba(14,14,28,0.96)'], [1, 'rgba(6,6,14,0.98)']]);
-  g.globalAlpha = 0.14; g.fillStyle = '#000'; for (let i = 0; i < 3; i++) g.fillRect(0, c - R * 0.5 + i * R * 0.42, SZ, R * 0.1);
+  g.fillStyle = kind === 2 ? mixc(0.55, 1) : color; g.fillRect(0, 0, SZ, SZ);
+  if (kind === 0) {
+    // bands of uneven width and strength, bowed like lines of latitude seen from a little above
+    const tilt = (r() - 0.5) * 0.5, bow = 0.1 + 0.2 * r();
+    g.translate(c, c); g.rotate(tilt);
+    for (let y = -R; y < R;) {
+      const h = R * (0.05 + 0.22 * r() * r()), k = (r() - 0.5) * 0.7;
+      g.strokeStyle = mixc(k, 0.35 + 0.5 * r()); g.lineWidth = h;
+      g.beginPath(); g.ellipse(0, y + h / 2 - R * bow, R * 1.6, R * bow * 2, 0, 0.05 * Math.PI, 0.95 * Math.PI); g.stroke();
+      y += h * (0.7 + 0.9 * r());
+    }
+    if (r() < 0.6) { g.fillStyle = mixc(r() < 0.5 ? 0.45 : -0.35, 0.6); g.beginPath(); g.ellipse((r() - 0.5) * R, (r() - 0.3) * R * 0.8, R * 0.2, R * 0.1, 0, 0, TAU); g.fill(); }   // a storm
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  } else if (kind === 1) {
+    for (let i = 0; i < 16; i++) { const x = c + (r() - 0.5) * R * 2, y = c + (r() - 0.5) * R * 2, rad = R * (0.12 + 0.4 * r() * r()), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, mixc((r() - 0.6) * 0.8, 0.5)); gr.addColorStop(1, mixc(0, 0)); g.fillStyle = gr; g.fillRect(0, 0, SZ, SZ); }
+    for (let i = 0; i < 9; i++) {   // craters: a dark bowl with a lit lower-right lip
+      const x = c + (r() - 0.5) * R * 1.7, y = c + (r() - 0.5) * R * 1.7, rad = R * (0.03 + 0.1 * r() * r());
+      g.fillStyle = mixc(-0.5, 0.5); g.beginPath(); g.arc(x, y, rad, 0, TAU); g.fill();
+      g.strokeStyle = mixc(0.5, 0.5); g.lineWidth = 0.8; g.beginPath(); g.arc(x, y, rad, 0.1 * Math.PI, 0.8 * Math.PI); g.stroke();
+    }
+  } else {
+    for (let i = 0; i < 8; i++) { const x = c + (r() - 0.5) * R * 2, y = c + (r() - 0.5) * R * 2, rad = R * (0.2 + 0.4 * r()), gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, mixc(r() < 0.5 ? 0.9 : 0.15, 0.45)); gr.addColorStop(1, mixc(0.5, 0)); g.fillStyle = gr; g.fillRect(0, 0, SZ, SZ); }
+    g.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {   // cracks
+      let x = c + (r() - 0.5) * R * 1.6, y = c + (r() - 0.5) * R * 1.6, a = r() * TAU;
+      g.strokeStyle = r() < 0.6 ? 'rgba(255,255,255,0.55)' : mixc(-0.3, 0.45); g.lineWidth = 0.5 + 0.6 * r(); g.beginPath(); g.moveTo(x, y);
+      for (let q = 0; q < 4; q++) { a += (r() - 0.5) * 1.1; x += Math.cos(a) * R * 0.22; y += Math.sin(a) * R * 0.22; g.lineTo(x, y); }
+      g.stroke();
+    }
+  }
+  // the light: bright up-left, falling to a dark side that is not quite black
+  const sh = g.createRadialGradient(c - R * 0.55, c - R * 0.6, 0, c - R * 0.55, c - R * 0.6, R * 2.1);
+  [[0, 'rgba(255,250,240,0.5)'], [0.14, 'rgba(255,250,240,0.08)'], [0.36, 'rgba(10,10,24,0.25)'], [0.6, 'rgba(10,10,24,0.9)'], [1, 'rgba(6,6,14,0.97)']].forEach(([o, col]) => sh.addColorStop(o, col));
+  g.fillStyle = sh; g.fillRect(0, 0, SZ, SZ);
   g.restore();
-  // soften the disc's edge, then a thin limb of light up-left
-  g.globalCompositeOperation = 'destination-out'; g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 1.6; g.beginPath(); g.arc(c, c, R, 0, TAU); g.stroke();
-  g.globalCompositeOperation = 'lighter'; g.strokeStyle = rgba('#ffffff', 0.35); g.lineWidth = 1.1; g.beginPath(); g.arc(c, c, R - 0.8, Math.PI * 0.95, Math.PI * 1.6); g.stroke();
+  // out of focus at the edge: the disc fades over its last tenth
+  g.globalCompositeOperation = 'destination-in';
+  const ed = g.createRadialGradient(c, c, R * 0.86, c, c, R); ed.addColorStop(0, '#000'); ed.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = ed; g.fillRect(0, 0, SZ, SZ);
+  g.globalCompositeOperation = 'destination-over';
+  rg(g, c, c, SZ * 0.5, [[0, rgba(color, 0.2)], [0.56, rgba(color, 0.14)], [0.72, rgba(color, 0.05)], [1, rgba(color, 0)]]);   // haze, behind the disc
 });
 // A point of light
 const dot = color => make('dot' + color, g => rg(g, SZ / 2, SZ / 2, SZ / 2, [[0, '#ffffff'], [0.12, rgba(color, 0.95)], [0.4, rgba(color, 0.25)], [1, rgba(color, 0)]]));
@@ -82,14 +117,14 @@ const PLANETS = ['#d9a066', '#8fb7e8', '#c9785a', '#b7a6d9', '#9ad0b0'];
 export function spaceShape(M, id, line, beads) {
   const r = mulberry32(hash32(id, 808)), st = [], tw = [], dr = [], up = [], K = M.space, path = new Path2D();
   // A planet: upright (see drawUpright), laid over, sized so its disc is r across
-  const addPlanet = (x, y, rad) => up.push([planet(PLANETS[Math.floor(r() * PLANETS.length)]), x, y, rad / 0.6, 0.92, true]);
+  const addPlanet = (x, y, rad) => { const q = Math.floor(r() * PLANETS.length * 6); up.push([planet(PLANETS[q % PLANETS.length], Math.floor(q / PLANETS.length) % 3, q % 2), x, y, rad / 0.6, 0.94, true]); };
   // Star brushes keep to the line you draw (v25): no wandering, no thin patches, a short scatter
   const tight = K.kind === 'stars', r2 = mulberry32(hash32(id, 809));   // r2: seeds for v25's additions, so older parts stay as they were
   const around = (x, y, d) => { const a = r() * TAU, k = d * Math.sqrt(r()); return [x + Math.cos(a) * k, y + Math.sin(a) * k]; };
   // Far scatter: most land near, a few very far (reach = how many R out the farthest go); returns [x, y, 0..1 distance]
   const far = (x, y, R, reach) => { const a = r() * TAU, u = Math.pow(r(), 1.7), d = R * (0.2 + reach * u); return [x + Math.cos(a) * d, y + Math.sin(a) * d, u]; };
   const tiny = (x, y, R, col, reach = 3.4) => { const [px, py, u] = far(x, y, R, reach), s = R * (0.02 + 0.09 * r() * r()) * (1 - 0.4 * u); st.push([dot(col), px, py, s, 0, (0.2 + 0.8 * r() * r()) * (1 - 0.55 * u) + 0.1]); };
-  const bright = (x, y, s, col) => { const sp = r() < 0.5 ? 4 : 6; r(); up.push([star(col, sp), x, y, s, 0.6 + 0.35 * r()]); tw.push([x, y, s, r() * TAU, 0.6 + 2.2 * r(), 0, sp]); };
+  const bright = (x, y, s, col) => { const sp = 6; r(); r(); /* always six spikes (v29) */ up.push([star(col, sp), x, y, s, 0.6 + 0.35 * r()]); tw.push([x, y, s, r() * TAU, 0.6 + 2.2 * r(), 0, sp]); };
   const extras = (x, y, R) => {
     if (r() < 0.035) { const [px, py] = far(x, y, R, tight ? 1.2 : 3); addPlanet(px, py, R * (0.05 + 0.1 * r())); r(); }
     if (r() < 0.03) { const [px, py] = far(x, y, R, tight ? 1.4 : 3.5); st.push([galaxy('#a9c4ff', Math.floor(r() * 3)), px, py, R * (0.2 + 0.25 * r()), r() * TAU, 0.5 + 0.4 * r()]); }
@@ -115,7 +150,7 @@ export function spaceShape(M, id, line, beads) {
     } else if (K.kind === 'stars') {
       // Stars stay inside the brush's own width (Rs), whatever the brush size; only their sizes follow R
       for (let k = 0, n = 2 + Math.floor(r() * r() * 10); k < n; k++) { const [px, py] = near(x, y, Rs); st.push([dot(r() < 0.7 ? K.a : K.b), px, py, R * (0.02 + 0.09 * r() * r()), 0, 0.3 + 0.7 * r() * r()]); }
-      if (r() < 0.25) { const [sx, sy] = near(x, y, Rs * 0.8); bright(sx, sy, Math.min(R * (0.15 + 0.7 * r() * r() * r()), Rs * 2.2), r() < 0.6 ? K.a : K.b); }
+      if (r() < 0.25) { const [sx, sy] = near(x, y, Rs * 0.8); bright(sx, sy, Math.min(R * (0.15 + 0.4 * r() * r() * r()), Rs * 1.45), r() < 0.6 ? K.a : K.b); }
       if (r() < 0.06 && K.planets) { const [px, py] = near(x, y, Rs); addPlanet(px, py, R * (0.05 + 0.08 * r())); r(); }
     }
   };
@@ -124,7 +159,7 @@ export function spaceShape(M, id, line, beads) {
       const R = b.r * 4;
       path.moveTo(b.x + b.r, b.y); path.arc(b.x, b.y, b.r, 0, TAU);
       if (bi % 2 && beads.length > 2) continue;   // every other bead: big stamps overlap otherwise
-      if (K.kind === 'stars') { bright(b.x, b.y, R * (0.4 + 0.8 * r() * r()), r() < 0.6 ? K.a : K.b); for (let k = 0; k < 3; k++) tiny(b.x, b.y, R, K.a, 2.5); }
+      if (K.kind === 'stars') { bright(b.x, b.y, R * (0.3 + 0.48 * r() * r()), r() < 0.6 ? K.a : K.b); for (let k = 0; k < 3; k++) tiny(b.x, b.y, R, K.a, 2.5); }
       else if (K.kind === 'galaxy') st.push([galaxy(K.a, st.length % 3), b.x, b.y, R * (0.8 + 0.4 * r()), r() * TAU, 1]);
       else knot(b.x, b.y, R * 0.8);
     }

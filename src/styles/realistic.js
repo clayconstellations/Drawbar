@@ -34,7 +34,27 @@ slimeMat.swatchFor = c => `radial-gradient(circle at 62% 64%, ${tint(c, 0.5)} 0 
 const clayT = c => [SOFTDROP(0.4), F(1, shade(c, 0.5)), CLIP, S(1, shade(c, 0.5), 0.14, 0.45), S(0.8, c, 0.3, 0.5), S(0.5, tint(c, 0.22), 0.42, 0.5, 0.85), END];
 export const clay = { name: 'Clay', label: 'Clay', accent: '#d98a5f', glow: '#d98a5f', glowA: 0, make: () => clayT('#d98a5f'), tintOps: clayT,
   swatch: ball('#d98a5f', tint('#d98a5f', 0.16), shade('#d98a5f', 0.32)), swatchFor: c => ball(c, tint(c, 0.16), shade(c, 0.32)) };
-// Glass (v28): see-through, so it reads by its edge and two hard glints. 2 blurred layers. Hides nothing beneath it.
-const glassT = c => [SOFTDROP(0.22), F(1, c, 0, 0.26), CLIP, S(1, shade(c, 0.55), -0.34, 0.3, 0.55), S(0.5, tint(c, 0.7), 0.5, 0.35, 0.6), F(0.13, '#ffffff', 0.62, 0.95), F(0.07, '#ffffff', -0.5, 0.45), END];
+// Glass: see-through, so it reads by its edge: a hard dark rim with a thin bright line inside it (v29: without the
+// hard edge it read as a smudge), a soft shadow side and two hard glints. 2 blurred layers. Hides nothing beneath it.
+const RIM = (k0, k, c, a = 1) => ({ t: 'rim', k0, k, c, a });
+const glassT = c => [SOFTDROP(0.22), F(1, c, 0, 0.2), CLIP, S(1, shade(c, 0.55), -0.34, 0.3, 0.5), S(0.5, tint(c, 0.7), 0.5, 0.35, 0.55),
+  RIM(1, 0.86, shade(c, 0.62), 0.9), RIM(0.86, 0.78, tint(c, 0.85), 0.55), F(0.13, '#ffffff', 0.58, 0.95), F(0.07, '#ffffff', -0.46, 0.5), END];
 export const glass = { name: 'Glass', label: 'Glass', accent: '#9fd8ee', glow: '#9fd8ee', glowA: 0.1, make: () => glassT('#9fd8ee'), tintOps: glassT, clear: true,
-  swatch: '#9fd8ee', swatchFor: c => `radial-gradient(circle at 34% 30%, #fff 0 7%, transparent 9%), radial-gradient(circle at 66% 70%, rgba(255,255,255,.5) 0 5%, transparent 7%), radial-gradient(circle, ${c}55 0 46%, ${shade(c, 0.4)} 54%, ${c}55 60%)` };
+  swatch: '#9fd8ee', swatchFor: c => `radial-gradient(circle at 34% 30%, #fff 0 7%, transparent 9%), radial-gradient(circle at 66% 70%, rgba(255,255,255,.5) 0 5%, transparent 7%), radial-gradient(circle, ${c}44 0 52%, ${tint(c, 0.85)} 54% 60%, ${shade(c, 0.62)} 62% 100%)` };
+// ----- v29: four more, none dearer than Cream (5 blurred layers)
+// Wax: light gets into it, so the shadow side stays coloured and the shine is wide and dull. 3 blurred layers.
+const waxT = c => [SOFTDROP(0.35), F(1, shade(c, 0.26)), CLIP, S(1, shade(c, 0.12), 0.12, 0.5), S(0.8, tint(c, 0.2), 0.26, 0.6), S(0.42, tint(c, 0.62), 0.36, 0.55, 0.6), F(0.2, '#ffffff', 0.5, 0.16), END];
+// Pearl: pale, with a pink sheen on the shadow side and a blue one toward the light. 4 blurred layers.
+const pearlT = c => { const b = tint(c, 0.66); return [SOFTDROP(0.4), F(1, shade(b, 0.42)), CLIP, S(1, b, 0.14, 0.4), S(0.72, '#ffc4e2', -0.2, 0.5, 0.5), S(0.7, '#c2ecff', 0.26, 0.5, 0.6), S(0.3, '#ffffff', 0.44, 0.35, 0.95), END]; };
+// Brushed metal: two blurred layers for the round, then fine hard bands along the line (plain fills) for the grain,
+// and one soft shine. 3 blurred layers.
+const BANDS = [0.95, 0.88, 0.8, 0.73, 0.66, 0.58, 0.5, 0.43, 0.35, 0.27, 0.19, 0.11];
+const brushedT = c => [SOFTDROP(0.5), F(1, shade(c, 0.5)), CLIP, S(1, shade(c, 0.34), 0.12, 0.4), S(0.74, tint(c, 0.22), 0.28, 0.55),
+  ...BANDS.map((k, i) => F(k, i % 2 ? shade(c, 0.6) : tint(c, 0.7), 0.1, i % 2 ? 0.2 : 0.17)), S(0.34, tint(c, 0.8), 0.4, 0.5, 0.5), END];
+// Rubber: dark and matte, with one tight dull sheen. 3 blurred layers.
+const rubberT = c => [SOFTDROP(0.45), F(1, shade(c, 0.74)), CLIP, S(1, shade(c, 0.58), 0.12, 0.4), S(0.78, shade(c, 0.34), 0.3, 0.55), S(0.3, tint(c, 0.3), 0.46, 0.4, 0.42), END];
+const more = (name, label, c0, ops, sw) => ({ name, label, accent: c0, glow: c0, glowA: 0, make: () => ops(c0), tintOps: ops, swatch: sw(c0), swatchFor: sw });
+export const wax = more('Wax', 'Wax', '#f7da7a', waxT, c => `radial-gradient(circle at 38% 34%, ${tint(c, 0.6)} 0 14%, ${tint(c, 0.15)} 50%, ${shade(c, 0.22)} 100%)`);
+export const pearl = more('Pearl', 'Pearl', '#eef1f6', pearlT, c => `radial-gradient(circle at 36% 32%, #fff 0 9%, #c2ecff 30%, ${tint(c, 0.66)} 52%, #f3bfd9 76%, ${shade(tint(c, 0.66), 0.4)} 100%)`);
+export const brushed = more('Brushed metal', 'Brushed', '#e2b24a', brushedT, c => `repeating-linear-gradient(100deg, rgba(255,255,255,.2) 0 1px, rgba(0,0,0,.2) 1px 2px, transparent 2px 3px), linear-gradient(190deg, ${tint(c, 0.45)}, ${shade(c, 0.5)})`);
+export const rubber = more('Rubber', 'Rubber', '#f08a5c', rubberT, c => `radial-gradient(circle at 36% 32%, ${shade(c, 0.1)} 0 7%, ${shade(c, 0.4)} 34%, ${shade(c, 0.74)} 100%)`);

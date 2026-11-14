@@ -8,6 +8,8 @@ import { syncUI } from './ui.js';
 import { redrawSoon } from '../render/compose.js';
 import { applySpace, applyTone, applyVolumes } from '../sound/graph.js';
 import { accent, world } from '../worlds/index.js';
+import { MATS } from '../styles/index.js';
+import { OPTS, optKind, optsFor } from './brushopts.js';
 
 export function ringPath(f0, f1) {
   const n = Math.max(2, Math.ceil((f1 - f0) * 60)), r = 17, out = [], inn = [];
@@ -78,7 +80,7 @@ const capped = (mode, key, r) => {
   return key === 'copies' ? [r[0], Math.min(r[1], L.copies)] : key === 'tiles' ? [r[0], Math.min(r[1], L.tiles)] : key === 'turns' ? [r[0], Math.min(r[1], L.turns)] : r;
 };
 export const pm = () => score.mode;
-export let pk1, pk2, pk3;
+export let pk1, pk2, pk3, ptKnob;
 // The four sound knobs, the two level knobs, and the two pattern knobs
 export function initKnobs() {
   for (const [id, key, onChange, col] of [['knDensity', 'density', () => {}, '#62c6ff'], ['knProb', 'prob', () => {}, '#f58bc0'], ['knSpace', 'space', () => applySpace(), '#5fe6c0'], ['knTone', 'tone', () => applyTone(), '#ffd76b']]) {
@@ -107,8 +109,8 @@ export function initKnobs() {
     fmt: v => P2[pm()][4](v),
     color: accent, onStart: checkpoint, onEnd: () => { rebuild(); syncUI(); },
   });
-  // Points brush (Glitch): how much the points' sizes vary
-  knob($('ptVary'), { range: () => [0, 100], smooth: true, plain: true, int: true, px: 150, def: () => 50, get: () => ui.pt.vary, set: v => { ui.pt.vary = v; }, fmt: v => Math.round(v), color: accent });
+  // Brush options (Glitch): the Variety knob, for whichever brush is in hand
+  ptKnob = knob($('ptVary'), { range: () => [0, 100], smooth: true, plain: true, int: true, px: 150, def: () => { const k = optKind(MATS[ui.color]); return k ? OPTS[k].def.vary : 50; }, get: () => { const o = optsFor(optKind(MATS[ui.color])); return o ? o.vary : 50; }, set: v => { const o = optsFor(optKind(MATS[ui.color])); if (o) o.vary = v; }, fmt: v => Math.round(v), color: accent });
   // Size in kaleidoscope and tiles (in free mode the first knob is Size)
   pk3 = knob($('pk3'), {
     range: () => [0, 100], smooth: true, plain: true, int: true, px: 220, def: () => 50,

@@ -33,6 +33,16 @@
       <button id="playBtn" class="icon" aria-label="Stop" title="Play / stop"><svg viewBox="0 0 24 24"><path class="pl" d="M7 5v14l12-7z" fill="currentColor"/><rect class="st" x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg></button>
       <button id="cogBtn" class="icon cogbtn" aria-label="Preferences" title="Preferences" aria-expanded="false" aria-controls="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
+  <section class="group pattern" id="patternBar" aria-label="Pattern">
+    <h2>Pattern<span class="mname" id="modeName"></span></h2>
+    <div class="prow" id="paramRow">
+      <div class="seg modes" id="modeSeg" role="group" aria-label="Pattern type"></div>
+      <div class="kwrap" id="pk1w"><div class="kn" id="pk1" role="slider" tabindex="0" aria-label="Copies"></div><span class="kl" id="pk1l">Copies</span></div>
+      <div class="kwrap" id="pk2w"><div class="kn" id="pk2" role="slider" tabindex="0" aria-label="Spiral"></div><button id="rotBtn" class="icon toggle round" aria-pressed="false" aria-label="Rotate" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M17.5 3.5v4h-4"/></svg></button><span class="kl" id="pk2l">Spiral</span></div>
+      <div class="kwrap" id="pk3w"><div class="kn" id="pk3" role="slider" tabindex="0" aria-label="Size"></div><span class="kl">Size</span></div>
+      <div class="kwrap"><button id="mirrorBtn" class="icon toggle round" aria-pressed="true" aria-label="Mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 2.4"/><path d="M9.5 7L4 17h5.5z" fill="currentColor"/><path d="M14.5 7L20 17h-5.5z"/></svg></button><span class="kl">Mirror</span></div>
+    </div>
+  </section>
   </header>
 
   <div class="main" id="main">
@@ -41,16 +51,6 @@
     </div>
 
     <aside class="panel" id="panel" aria-label="Controls">
-      <section class="group pattern">
-        <h2>Pattern<span class="mname" id="modeName"></span></h2>
-        <div class="prow" id="paramRow">
-          <div class="seg modes" id="modeSeg" role="group" aria-label="Pattern type"></div>
-          <div class="kwrap" id="pk1w"><div class="kn" id="pk1" role="slider" tabindex="0" aria-label="Copies"></div><span class="kl" id="pk1l">Copies</span></div>
-          <div class="kwrap" id="pk2w"><div class="kn" id="pk2" role="slider" tabindex="0" aria-label="Spiral"></div><button id="rotBtn" class="icon toggle round" aria-pressed="false" aria-label="Rotate" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12a7 7 0 1 1-2.1-5"/><path d="M17.5 3.5v4h-4"/></svg></button><span class="kl" id="pk2l">Spiral</span></div>
-          <div class="kwrap" id="pk3w"><div class="kn" id="pk3" role="slider" tabindex="0" aria-label="Size"></div><span class="kl">Size</span></div>
-          <div class="kwrap"><button id="mirrorBtn" class="icon toggle round" aria-pressed="true" aria-label="Mirror"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3v18" stroke-dasharray="2 2.4"/><path d="M9.5 7L4 17h5.5z" fill="currentColor"/><path d="M14.5 7L20 17h-5.5z"/></svg></button><span class="kl">Mirror</span></div>
-        </div>
-      </section>
       <div class="seg pageseg" id="pageSeg" role="group" aria-label="Controls shown"><button data-v="0" aria-pressed="true">Draw</button><button data-v="1" aria-pressed="false">Sound</button></div>
       <div class="pager" id="pager">
         <div class="page" id="pageDraw">
@@ -68,15 +68,10 @@
         <div class="seg fx" id="fxSeg" role="group" aria-label="Effect"><button data-v="smear">Smear</button><button data-v="jitter">Jitter</button></div>
       </section>
       <section class="group" id="optGroup" hidden>
-        <h2>Points</h2>
+        <h2 id="optTitle">Brush</h2>
         <div class="row">
-          <div class="seg mini" id="ptShape" role="group" aria-label="Point shape">
-            <button data-v="square" aria-label="Squares" title="Squares"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg></button>
-            <button data-v="circle" aria-label="Circles" title="Circles"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="currentColor"/></svg></button>
-            <button data-v="triangle" aria-label="Triangles" title="Triangles"><svg viewBox="0 0 24 24"><path d="M12 5l7.5 13h-15z" fill="currentColor"/></svg></button>
-            <button data-v="plus" aria-label="Plus signs" title="Plus signs"><svg viewBox="0 0 24 24"><path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z" fill="currentColor"/></svg></button>
-          </div>
-          <div class="kwrap"><div class="kn" id="ptVary" role="slider" tabindex="0" aria-label="Size variety" aria-valuemin="0" aria-valuemax="100"></div><span class="kl">Variety</span></div>
+          <div class="seg mini" id="ptShape" role="group" aria-label="Shape"></div>
+          <div class="kwrap"><div class="kn" id="ptVary" role="slider" tabindex="0" aria-label="Variety" aria-valuemin="0" aria-valuemax="100"></div><span class="kl" id="ptVaryL">Variety</span></div>
         </div>
       </section>
       <section class="group">

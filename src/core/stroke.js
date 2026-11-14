@@ -136,6 +136,7 @@ export function prepare(s) {
       if (M.extra) Object.assign(s._shape.paths, extraPieces(s, M.extra, xs, ys, nx, ny, w, L, n, w0));
       if (M.puffs) s._shape.w0 = w0 * 0.75;
       if (M.clear) s._shape.noHide = true;   // see-through: covers nothing
+      s._shape.bb = s._bb;
       if (M.extra === 'bristle') s._shape.noHide = true;   // a dry brush covers nothing fully
     }
   } else {
@@ -161,6 +162,7 @@ export function prepare(s) {
     if (M.drip) { const d = dripsFor(beads.map(b => [b.x, b.y, b.r]), mulberry32(hash32(s.id, 91))); caps = d.caps; circ = circ.concat(d.circ); }
     const bw0 = beads.reduce((a, b) => a + b.r, 0) / beads.length, inkT = M.comic ? 0.26 * (M.inkW || 1) * bw0 : (M.ink || 0) * bw0;
     s._shape = buildShape(caps, circ, M.ks, bw0, inkT);
+    s._shape.bb = s._bb; if (M.clear) s._shape.noHide = true;
   }
   if (s._dot && (M.glyph || M.plant || M.space || M.micro)) { shapeFromBeads(s, M, [{ x: p[0][0], y: p[0][1], r: (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz }]); return; }
   if (s._dot) { const rr = (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz; s._shape = buildShape([], [M.geo ? [p[0][0], p[0][1], rr * M.geo.bead, M.geo.sides, M.geo.spin] : [p[0][0], p[0][1], rr]], M.ks, rr, M.comic ? 0.26 * rr : (M.ink || 0) * rr); }

@@ -41,6 +41,18 @@ const SOLIDS = {
   dodeca: solid([[1, 1, 1], [0, 1 / PHI, PHI]], true),
 };
 
+// One small mark added to a path: the dot shapes shared by Points and Nodes. h: half its size.
+function mark(P, shape, x, y, h) {
+  if (shape === 'circle') { P.moveTo(x + h * 1.1, y); P.arc(x, y, h * 1.1, 0, TAU); }
+  else if (shape === 'triangle') { P.moveTo(x, y - h * 1.3); P.lineTo(x + h * 1.2, y + h * 0.8); P.lineTo(x - h * 1.2, y + h * 0.8); P.closePath(); }
+  else if (shape === 'plus') { P.rect(x - h * 1.3, y - h * 0.38, h * 2.6, h * 0.76); P.rect(x - h * 0.38, y - h * 1.3, h * 0.76, h * 2.6); }
+  else if (shape === 'heart') { const k = h * 1.25; P.moveTo(x, y + k * 1.1); P.bezierCurveTo(x - k * 2.1, y - k * 0.2, x - k * 0.9, y - k * 1.6, x, y - k * 0.5); P.bezierCurveTo(x + k * 0.9, y - k * 1.6, x + k * 2.1, y - k * 0.2, x, y + k * 1.1); P.closePath(); }
+  else if (shape === 'star') { for (let q = 0; q < 10; q++) { const a = -Math.PI / 2 + q * Math.PI / 5, rr = h * (q % 2 ? 0.62 : 1.55), px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr; if (q) P.lineTo(px, py); else P.moveTo(px, py); } P.closePath(); }
+  else P.rect(x - h, y - h, h * 2, h * 2);
+}
+// The stroke's own options (set beside the brushes when it was drawn): [shape, variety 0..1]. Strokes from before a
+// brush had options have none, and get the look they always had (dShape, dVary).
+const optOf = (s, dShape, dVary) => s.pt ? [s.pt.shape || dShape, (s.pt.vary == null ? dVary * 100 : s.pt.vary) / 100] : [dShape, dVary];
 // Per-stroke set-up, once: the effect's seeded settings, and where the solids sit along the line
 function setup(s) {
   const M = MATS[s.color], r = mulberry32(hash32(s.id, 911)), n = s.pts.length, L = s._L;
@@ -55,12 +67,14 @@ function setup(s) {
   if (M.wire || M.nodes) {
     const base = NEON_W * s._sz * (s.tool === 'beads' ? 1.6 : 2.8) * (M.nodes ? 0.5 : 1), gap = M.nodes ? Math.max(0.3, base * 5) : Math.max(base * 2.3, s._len / 9);   // at most about 9 solids a stroke; nodes sit far apart, so the line between them only roughly follows the hand
     g.els = []; g.lw = clamp(base * 0.085, 0.0022, 0.006);
+    // Options: which solid (or by the hand's speed), and how much their sizes vary (50 = as it always was)
+    const [oShape, oVary] = optOf(s, 'auto', 0.5), spread = M.nodes ? 0.6 : 1.2 * oVary + Math.max(0, oVary - 0.5) * 1.3;
     let next = 0;
     for (let i = 0; i < n; i++) {
       if (L[i] < next && !(i === n - 1 && (!g.els.length || (M.nodes && L[i] - L[g.els[g.els.length - 1].i] > gap * 0.4)))) continue;
       // Solids: the faster the hand was moving here, the more faces (4, 6, 8, 12, 20)
-      const v = speedN(s._sp[i]), kind = M.wire === 'auto' ? (v < 0.12 ? 'tetra' : v < 0.26 ? 'cube' : v < 0.45 ? 'octa' : v < 0.7 ? 'dodeca' : 'icosa') : M.wire;
-      g.els.push({ i, kind, x: s._xs[i], y: s._ys[i], R: base * (0.7 + 0.6 * r()), a: [r() * TAU, r() * TAU], w: [(r() - 0.5) * 2.6, (r() - 0.5) * 2.6], t: s.pts[i][2] });
+      const v = speedN(s._sp[i]), kind = M.wire === 'auto' && oShape !== 'auto' && SOLIDS[oShape] ? oShape : M.wire === 'auto' ? (v < 0.12 ? 'tetra' : v < 0.26 ? 'cube' : v < 0.45 ? 'octa' : v < 0.7 ? 'dodeca' : 'icosa') : M.wire;
+      g.els.push({ i, kind, x: s._xs[i], y: s._ys[i], R: base * Math.max(0.3, 1 + (r() - 0.5) * spread), a: [r() * TAU, r() * TAU], w: [(r() - 0.5) * 2.6, (r() - 0.5) * 2.6], t: s.pts[i][2] });
       next = L[i] + gap;
     }
   }
@@ -104,8 +118,8 @@ function wirePath(s, g, S, T, slot, e) {
   return P;
 }
 // This frame's nodes: where they sit (after sway and jitter), the line through them with a few cross-links and a ring
-function nodesPath(s, g, S, T, slot, e) {
-  const P = new Path2D(), N = [];
+function nodesPath(s, g, S, T, slot, e, nr) {
+  const P = new Path2D(), N = [], D = new Path2D(), [shape, vary] = optOf(s, 'square', 0);
   for (const el of g.els) {
     if (el.t > T || el.t < g.T0) continue;
     const off = sway(s, el.i, S);
@@ -115,12 +129,13 @@ function nodesPath(s, g, S, T, slot, e) {
       x += (frac(h) - 0.5) * (big ? 9 : 2.4) * k; y += (frac(h >>> 8) - 0.5) * (big ? 7 : 2) * k;
     }
     N.push([x, y]);
+    mark(D, shape, x, y, nr * Math.max(0.35, 1 + (frac(hash32(g.seed, el.i, 37)) - 0.4) * vary * 3));
   }
-  if (!N.length) return { P, N };
+  if (!N.length) return { P, N, D };
   P.moveTo(N[0][0], N[0][1]); for (let i = 1; i < N.length; i++) P.lineTo(N[i][0], N[i][1]);
   for (let i = 0; i + 2 < N.length; i += 3) { P.moveTo(N[i][0], N[i][1]); P.lineTo(N[i + 2][0], N[i + 2][1]); }
   const R = g.els[0].R * 2.2; P.moveTo(N[0][0] + R, N[0][1]); P.arc(N[0][0], N[0][1], R, 0, TAU);
-  return { P, N };
+  return { P, N, D };
 }
 // This frame's glyph cells (static strokes keep theirs; loops and ripples re-read the grid as they move)
 function liveCells(s, S, T) {
@@ -177,9 +192,13 @@ function livePts(s, g, S, T, slot, e) {
 const LIVE = {
   // Oscilloscope: the line carries a travelling wave, taller on its notes
   scope(s, g, S, m, e) {
-    const P = new Path2D(), px = g.px, py = g.py, L = s._L, w = s._w, lam = g.base * 1.1, k = 0.7 + 1.3 * Math.min(e, 1.2);
+    const P = new Path2D(), px = g.px, py = g.py, L = s._L, w = s._w, k = 0.7 + 1.3 * Math.min(e, 1.2);
+    // Options: the wave's shape, and how uneven it is (the faster ripples riding on it, and swells along the line).
+    // The cornered waves are shorter, so a stroke holds enough of them to read.
+    const [shape, vary] = optOf(s, 'sine', 0.5), v2 = vary * 2, lam = g.base * (shape === 'sine' ? 1.1 : 0.42);
+    const W = shape === 'tri' ? p => Math.asin(Math.sin(p)) * 0.8 : shape === 'square' ? p => (Math.sin(p) >= 0 ? 0.8 : -0.8) : shape === 'saw' ? p => (mod(p / TAU, 1) * 2 - 1) * 0.85 : Math.sin;
     for (let i = g.m0; i < m; i++) {
-      const u = L[i], a = w[i] * 2.2 * k * (Math.sin(u / lam - S * 5 * g.rate + g.seed % 9) * 0.6 + Math.sin(u / (lam * 0.37) + S * 3.1) * 0.28 + Math.sin(u / (lam * 0.13) - S * 11) * 0.12 * (0.3 + e));
+      const u = L[i], a = w[i] * 2.2 * k * (1 + Math.max(0, vary - 0.5) * 1.5 * Math.sin(u / (lam * 2.3) + g.seed % 5)) * (W(u / lam - S * 5 * g.rate + g.seed % 9) * 0.6 + Math.sin(u / (lam * 0.37) + S * 3.1) * 0.28 * v2 + Math.sin(u / (lam * 0.13) - S * 11) * 0.12 * (0.3 + e) * v2);
       const x = px[i] + s._nx[i] * a, y = py[i] + s._ny[i] * a;
       if (i > g.m0) P.lineTo(x, y); else P.moveTo(x, y);
     }
@@ -201,19 +220,24 @@ const LIVE = {
   // The mark as level screen lines; now and then a line tears sideways, and a thicker band rolls down through it
   scan(s, g, S, m, e, slot) {
     const P = new Path2D(), px = g.px, py = g.py, w = s._w, rs = clamp(g.base * 0.17, 0.008, 0.022), rows = new Map();
+    // Options: which way the lines run (level, upright, or slanting either way), and how much their thickness varies.
+    // The lines are worked out in a turned frame (u along a line, v across the lines) and turned back when drawn.
+    const [shape, vary] = optOf(s, 'h', 0), ang = shape === 'v' ? Math.PI / 2 : shape === 'd1' ? -Math.PI / 4 : shape === 'd2' ? Math.PI / 4 : 0, ca = Math.cos(ang), sa = Math.sin(ang);
+    let v0 = 1e9, v1 = -1e9;
     for (let i = g.m0; i < m; i += 2) {
-      const r = w[i] * 1.25, y = py[i];
+      const r = w[i] * 1.25, u = px[i] * ca + py[i] * sa, y = -px[i] * sa + py[i] * ca;
+      if (y < v0) v0 = y; if (y > v1) v1 = y;
       for (let k = Math.ceil((y - r) / rs); k * rs <= y + r; k++) {
         const dy = k * rs - y, hw = Math.sqrt(Math.max(0, r * r - dy * dy));
         if (hw < rs * 0.2) continue;
         let row = rows.get(k); if (!row) rows.set(k, row = []);
-        row.push(px[i] - hw, px[i] + hw);
+        row.push(u - hw, u + hw);
       }
     }
-    const b = s._bb, band = b[1] + mod(S * 0.12 * g.rate + frac(g.seed), 1) * (b[3] - b[1]);
+    const band = v0 + mod(S * 0.12 * g.rate + frac(g.seed), 1) * (v1 - v0);
     for (const [k, row] of rows) {
       const h = hash32(g.seed, k, Math.floor(slot / (g.hold + 1))), tear = h % 9 === 0 ? (frac(h >>> 4) - 0.5) * g.base * 3 * g.reach * (1 + e) : 0;
-      const y = k * rs, th = rs * (Math.abs(y - band) < rs * 2.2 ? 0.85 : 0.42);
+      const y = k * rs, th = rs * (Math.abs(y - band) < rs * 2.2 ? 0.85 : 0.42) * Math.max(0.25, 1 + (frac(hash32(g.seed, k, 73)) - 0.45) * vary * 2.4);
       // Join the spans on this line, left to right
       const iv = []; for (let q = 0; q < row.length; q += 2) iv.push([row[q], row[q + 1]]);
       iv.sort((a, c) => a[0] - c[0]);
@@ -221,7 +245,12 @@ const LIVE = {
       for (let q = 1; q <= iv.length; q++) {
         if (q < iv.length && iv[q][0] <= x1) { x1 = Math.max(x1, iv[q][1]); continue; }
         // ends run a little long or short, each line its own way (v27: the edge no longer copies the drawing exactly)
-        { const ja = (frac(hash32(g.seed, k, 71)) - 0.35) * g.base * 1.1, jb = (frac(hash32(g.seed, k, 72)) - 0.35) * g.base * 1.1; if (x1 - x0 + ja + jb > rs * 0.5) P.rect(x0 - ja + tear, y - th / 2, x1 - x0 + ja + jb, th); }
+        { const ja = (frac(hash32(g.seed, k, 71)) - 0.35) * g.base * 1.1, jb = (frac(hash32(g.seed, k, 72)) - 0.35) * g.base * 1.1;
+          if (x1 - x0 + ja + jb > rs * 0.5) {
+            const a = x0 - ja + tear, b = a + x1 - x0 + ja + jb, c0 = y - th / 2, c1 = y + th / 2;
+            if (!ang) P.rect(a, c0, b - a, th);
+            else { P.moveTo(a * ca - c0 * sa, a * sa + c0 * ca); P.lineTo(b * ca - c0 * sa, b * sa + c0 * ca); P.lineTo(b * ca - c1 * sa, b * sa + c1 * ca); P.lineTo(a * ca - c1 * sa, a * sa + c1 * ca); P.closePath(); }
+          } }
         if (q < iv.length) [x0, x1] = iv[q];
       }
     }
@@ -231,24 +260,21 @@ const LIVE = {
   cloud(s, g, S, m, e) {
     const near = new Path2D(), far = new Path2D(), px = g.px, py = g.py, w = s._w, d0 = g.base * 0.1;
     // The stroke's own options (set beside the brushes): the points' shape, and how much their sizes vary
-    const shape = (s.pt && s.pt.shape) || 'square', vary = (s.pt ? s.pt.vary : 50) / 100;
+    const [shape, vary] = optOf(s, 'square', 0.5);
     for (const q of g.pc) {
       if (q.i >= m || q.i < g.m0) continue;
       const a = q.th + q.sp * S * g.rate, lat = q.rad * w[q.i] * Math.cos(a) * (1 + 0.6 * e), dep = Math.sin(a);
       const d = d0 * Math.max(0.25, 1.05 + (q.sz - 1.05) * vary * 2.6) * (1 + 0.45 * dep * (0.3 + vary)) * (1 + 0.5 * e), h = d / 2;
       const x = px[q.i] + s._nx[q.i] * lat, y = py[q.i] + s._ny[q.i] * lat, P = dep > -0.2 ? near : far;
-      if (shape === 'circle') { P.moveTo(x + h * 1.1, y); P.arc(x, y, h * 1.1, 0, TAU); }
-      else if (shape === 'triangle') { P.moveTo(x, y - h * 1.3); P.lineTo(x + h * 1.2, y + h * 0.8); P.lineTo(x - h * 1.2, y + h * 0.8); P.closePath(); }
-      else if (shape === 'plus') { P.rect(x - h * 1.3, y - h * 0.38, d * 1.3, d * 0.38); P.rect(x - h * 0.38, y - h * 1.3, d * 0.38, d * 1.3); }
-      else P.rect(x - h, y - h, d, d);
+      mark(P, shape, x, y, h);
     }
     return { fill: near, far };
   },
   // A strip of wireframe ground along the line, its hills rolling past
   terrain(s, g, S, m, e) {
-    const P = new Path2D(), px = g.px, py = g.py, L = s._L, w = s._w, lam = g.base * 1.6, K = 5, step = 3, amp = 0.9 + 0.9 * Math.min(e, 1.2);
+    const P = new Path2D(), px = g.px, py = g.py, L = s._L, w = s._w, lam = g.base * 1.6, K = 5, step = 3, [, vary] = optOf(s, '', 0.5), amp = (0.9 + 0.9 * Math.min(e, 1.2)) * (0.45 + 1.1 * vary);   // option: how rough the ground is
     const at = (i, v) => {
-      const u = L[i], h = 0.55 * Math.sin(u / lam - S * 1.3 * g.rate + v * 1.7 + g.seed % 5) + 0.45 * Math.sin(u / (lam * 0.41) + S * 0.8 - v * 2.9);
+      const u = L[i], h = 0.55 * Math.sin(u / lam - S * 1.3 * g.rate + v * 1.7 + g.seed % 5) + 0.9 * vary * Math.sin(u / (lam * 0.41) + S * 0.8 - v * 2.9) + Math.max(0, vary - 0.5) * 0.9 * Math.sin(u / (lam * 0.17) - S * 1.9 + v * 4.1);
       return [px[i] + s._nx[i] * v * w[i] * 1.5, py[i] + s._ny[i] * v * w[i] * 1.5 - h * w[i] * 0.75 * amp];
     };
     const last = m - 1;
@@ -408,13 +434,13 @@ export function drawLive(X, s, S, B, now, P) {
     X.lineWidth = g.lw; X.lineJoin = 'bevel'; X.lineCap = 'butt';   // plain line ends: the cheapest to draw
     pass = (dx, dy, a, col, op) => { X.globalAlpha = a; X.globalCompositeOperation = op || 'source-over'; X.strokeStyle = col || c; X.translate(dx, dy); X.stroke(path); X.translate(-dx, -dy); };
   } else if (M.nodes) {
-    const { P: path, N } = nodesPath(s, g, S, T, slot, e), nr = Math.min(g.els[0].R * 0.55, 0.011) * (1 + 0.8 * Math.min(e, 1.2));   // points stay points under big brushes
+    const nr = Math.min(g.els[0].R * 0.55, 0.011) * (1 + 0.8 * Math.min(e, 1.2)), { P: path, D } = nodesPath(s, g, S, T, slot, e, nr);   // points stay points under big brushes
     X.lineWidth = g.lw; X.lineJoin = 'bevel'; X.lineCap = 'butt';
     // The main pass (full strength, in the stroke's own colour) gets white points; copies get theirs in the copy's colour
     pass = (dx, dy, a, col) => {
       X.globalAlpha = a; X.strokeStyle = col || c; X.translate(dx, dy); X.stroke(path);
       X.fillStyle = a === 1 && (!col || col === c) ? '#ffffff' : col || c;
-      for (const q of N) X.fillRect(q[0] - nr, q[1] - nr, nr * 2, nr * 2);
+      X.fill(D);
       X.translate(-dx, -dy);
     };
   } else {

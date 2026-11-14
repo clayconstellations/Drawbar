@@ -3,7 +3,8 @@ import { MODES, mirrored } from '../canvas/index.js';
 import { endPreview, keepClip, page, preview, showPage } from './clips.js';
 import { $ } from './dom.js';
 import { openExport } from './export.js';
-import { P1, P2, mixKnobs, pk1, pk2, pk3, pm } from './knobs.js';
+import { P1, P2, mixKnobs, pk1, pk2, pk3, pm, ptKnob } from './knobs.js';
+import { OPTS, optKind, optsFor } from './brushopts.js';
 import { isVisual, layout } from './layout.js';
 import { anim, randomize, rebuild, restore, setMap, setTempo } from './settings.js';
 import { drawSizeBar } from './sizebar.js';
@@ -60,8 +61,18 @@ export function syncUI() {
   if (!w.matIdx.includes(ui.color)) ui.color = w.matIdx[0];
   for (const x of WORLDS) { const b = $('world-' + x.id); b.setAttribute('aria-selected', String(x === w)); b.tabIndex = x === w ? 0 : -1; b.hidden = !!x.legacy && x !== w; }
   $('fxGroup').hidden = !(w.options && w.options.fx);
-  $('optGroup').hidden = MATS[ui.color].gl !== 'cloud';
-  for (const b of $('ptShape').children) b.setAttribute('aria-pressed', String(b.dataset.v === ui.pt.shape));
+  // Effect brushes work on what is beneath them: greyed out until a regular brush has drawn something
+  const noBase = !score.strokes.some(s => !MATS[s.color].under);
+  if (noBase && MATS[ui.color].under) ui.color = w.matIdx.find(i => !MATS[i].under);
+  for (const i of w.matIdx) if (MATS[i].under) $('sw-' + i).disabled = noBase;
+  // Brush options: the shape choices and Variety knob of the brush in hand
+  { const kind = ui.tool === 'erase' ? null : optKind(MATS[ui.color]), O = kind && OPTS[kind], o = optsFor(kind), seg = $('ptShape');
+    $('optGroup').hidden = !kind;
+    if (kind) {
+      if (seg.dataset.kind !== kind) { seg.dataset.kind = kind; seg.innerHTML = (O.shapes || []).map(([v, name, svg]) => `<button data-v="${v}" aria-label="${name}" title="${name}">${svg}</button>`).join(''); seg.hidden = !O.shapes; $('ptVaryL').textContent = O.vary; $('ptVary').setAttribute('aria-label', O.vary); $('optTitle').textContent = O.title; }
+      for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === o.shape));
+      ptKnob.draw();
+    } }
   $('keySel').value = score.key; $('scaleSel').value = score.scale;
   for (const b of $('fxSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === score.fx));
   $('styleName').textContent = w.name;
@@ -126,7 +137,7 @@ export function initControls() {
   $('keySel').addEventListener('change', e => change(() => { score.key = +e.target.value; applyKeyScale(); }));
   $('scaleSel').addEventListener('change', e => change(() => { score.scale = +e.target.value; applyKeyScale(); }));
   // Points brush: shape and size variety, kept on each stroke as it is drawn
-  $('ptShape').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v) { ui.pt.shape = v; syncUI(); } });
+  $('ptShape').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; const o = optsFor(optKind(MATS[ui.color])); if (v && o) { o.shape = v; syncUI(); } });
   $('worldTabs').addEventListener('keydown', e => {
     const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
     if (!d) return;

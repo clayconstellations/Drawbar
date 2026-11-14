@@ -9,6 +9,7 @@ import { clamp } from './math.js';
 import { stampPts } from '../render/stamps.js';
 import { audioReady, beatAt, playing, rotAt, scrollAt, sessionNow, startAudio, visNow } from './transport.js';
 import { syncUI } from './ui.js';
+import { optKind, optsFor } from './brushopts.js';
 import { cv, geo, redrawSoon } from '../render/compose.js';
 import { MATS } from '../styles/index.js';
 import { world } from '../worlds/index.js';
@@ -105,7 +106,7 @@ export function initInput() {
     } else if (TOOL[ui.tool].stamp) {
       // Stamp: a tap places it at the size bar's size; dragging sets its size and turns it to point at the finger
       cur = { id: e.pointerId, stamp: TOOL[ui.tool].stamp, tool: ui.tool, color: ui.color, cx: p.x, cy: p.y, r: stampRadius(ui.brushV) / fs(), rot: -Math.PI / 2, moved: false, pts: [] };
-    } else cur = { id: e.pointerId, sid: takeId(), pt: MATS[ui.color].gl === 'cloud' ? { ...ui.pt } : undefined, tool: ui.tool, color: ui.color, tint: world().colors ? ui.tint : undefined, size: brushSize(ui.brushV) / fs(), pts: [[p.x, p.y, 0, pressureOf(e)]], t0: e.timeStamp / 1000, sx: p.x, sy: p.y };
+    } else cur = { id: e.pointerId, sid: takeId(), pt: optKind(MATS[ui.color]) ? { ...optsFor(optKind(MATS[ui.color])) } : undefined, tool: ui.tool, color: ui.color, tint: world().colors ? ui.tint : undefined, size: brushSize(ui.brushV) / fs(), pts: [[p.x, p.y, 0, pressureOf(e)]], t0: e.timeStamp / 1000, sx: p.x, sy: p.y };
     e.preventDefault();
   });
   cv.addEventListener('pointermove', e => {

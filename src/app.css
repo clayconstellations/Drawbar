@@ -26,7 +26,7 @@ body{
 .main{flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px}
 .left{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; width:100%; min-width:0}
 .panel{width:100%; display:flex; flex-direction:column; align-items:center; gap:8px; min-width:0}
-/* The bottom pane: the pattern row stays put; under it, two pages side by side (Draw, Sound). Swipe sideways or use the toggle. */
+/* The bottom pane: a Draw / Sound toggle, then two pages side by side. Swipe sideways or use the toggle. */
 .pageseg{padding:2px; gap:2px}
 .pageseg button{min-height:26px; padding:0 14px; font-size:12px}
 .pager{display:flex; width:100%; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; scrollbar-width:none; overscroll-behavior-x:contain}
@@ -51,6 +51,11 @@ body{
 .app.visual #cv{border-radius:0}
 
 /* Top bar */
+/* The pattern row lives in the top section (v29): always in view, above the drawing. A row of its own, centred;
+   on a wide screen it sits in the bar itself, between the name and the buttons. */
+.top .pattern{flex:1 0 100%; align-items:center}
+.top .pattern h2{display:none}
+@media (min-width:1080px){ .top .pattern{flex:0 0 auto; order:0; margin-right:auto} .top .brand{order:-1} }
 .top{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; min-width:0; flex:none}
 .brand{font-family:var(--display); font-weight:700; font-size:20px; letter-spacing:.01em; padding-block:6px; margin-right:auto}
 .cluster{display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0}
@@ -218,7 +223,7 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
 .sw.pixtoggle[aria-pressed="true"]{color:var(--ink); border-color:var(--ink)}
 @media (min-width:880px) and (min-aspect-ratio:5/4){
   .group h2{display:block}
-  .prow{min-height:64px; flex-wrap:wrap; row-gap:8px}   /* three knobs and Mirror do not fit beside the pattern buttons: they wrap below */
+  
   .drawgroup{flex:none} .drawrow:not(.many) .tools{justify-self:stretch} .tools .tool{flex:1 1 0}
   .drawrow.many .tools{grid-column:1 / -1; justify-self:stretch} .drawrow.many .stylewrap{grid-column:2} .drawrow.many .sizedot{grid-column:3}
   .swatches{grid-template-columns:repeat(10, minmax(0, 1fr)); gap:4px}
@@ -291,3 +296,5 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
   .tool{height:42px} .tool span{display:none} .sizedot{width:42px; height:42px} .stylebtn{min-height:42px}
   .kl{display:none} .seg.fx button{min-height:28px}
 }
+/* Short phones: tighter rows, so the style with the most rows (Glitch) still fits */
+@media (max-height:640px) and (max-width:440px){ .page{gap:5px 16px} .panel{gap:5px} #optGroup .kl{display:none} .app{gap:6px; padding-block:6px} .main{gap:8px} }
