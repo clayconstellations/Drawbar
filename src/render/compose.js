@@ -20,7 +20,7 @@ import { GCELL, glyphCells, glyphShape, lineSamples } from './glyphs.js';
 import { stampPts, stampShape } from './stamps.js';
 import { drawLive, liveFrame } from './glitchfx.js';
 import { pulseFrame } from '../sound/pulse.js';
-import { drawFilm, drawSpaceBg, drawTwinkles } from './space.js';
+import { drawBgStars, drawFilm, drawSpaceBg, drawTwinkles } from './space.js';
 import { drawMicroBg, drawPaperBg } from './micro.js';
 
 export const cv = $('cv'), ctx = cv.getContext('2d');
@@ -263,6 +263,7 @@ function trimPool(list, used) {
 export function releaseCanvases() {
   trimPool(pool, 0); trimPool(poolB, 0);
   ITEMS = []; relight = null; fade = null; groupsDirty = true; pending.length = 0;
+  starC.width = starC.height = 0; starKey = '';
   if (quality !== 1) { quality = 1; relayout(); }
   slowFor = fastFor = 0; frameEma = 16; buildBudget = 150;
 }
@@ -406,7 +407,7 @@ export function drawPreview(X, S, B, now) {
 }
 const NOPULSE = { drum: 0, by: new Map() };
 export function drawGuides(B, rot) {
-  if (world().render.bg === 'paper') return;   // plain paper: no fold or tile lines (they read as seams)
+  if (world().render.bg === 'paper' || world().render.noGuides) return;   // plain paper: no fold or tile lines (they read as seams)
   const m = score.mode, ext = Math.hypot(geo.W, geo.H) / 2 / geo.R + 0.05;
   ctx.strokeStyle = world().render.bg ? 'rgba(70,60,100,0.14)' : '#1c2132'; ctx.lineWidth = 0.003; ctx.beginPath();
   if (m === 'kaleido' && score.spiral < 0.04) {
@@ -514,6 +515,7 @@ export function frame(now) {
   drawGuides(B, rot);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (world().render.space && fb.width > 8) blitLayer(ctx, starLayer(), W, H, B, rot, cd);
   blitPicture(ctx, W, H, B, rot, cd, true);
   if (world().render.film) drawFilm(ctx, W, H, now, reduceMotion.matches);
   ctx.restore();
@@ -529,6 +531,29 @@ export function frame(now) {
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 // Put the composed picture (and its glow) on a screen-sized context: turned for free and kaleidoscope, tiled and
 // scrolled for tiles. c's transform is kept as the base (identity for the screen, a scale for smaller targets).
+// Space: the backdrop's stars go through the pattern like a stroke would (v30). They are drawn once per copy into a
+// layer the size of the picture's, redrawn only when the pattern settings change, and placed like the picture.
+const starC = document.createElement('canvas'), starX = starC.getContext('2d');
+let starKey = '';
+function starLayer() {
+  const key = [fb.width, fb.height, score.mode, score.copies, score.spiral, score.mirror, score.tiles, score.turns, score.fscale, score.fmirror].join();
+  if (key === starKey) return starC;
+  starKey = key;
+  if (starC.width !== fb.width || starC.height !== fb.height) { starC.width = fb.width; starC.height = fb.height; }
+  starX.setTransform(1, 0, 0, 1, 0, 0); starX.clearRect(0, 0, starC.width, starC.height); frameNorm(starX, starC);
+  // The stars cover the view whatever Size is set to; about the same number on screen however many copies there are
+  const E = Math.min(1.15 / fs(), 3.5), box = { _bb: [-E, -E, E, E] }, copies = Math.max(1, forCopies(starX, () => {}, box));
+  const n = Math.round(clamp(700 / copies, 30, 700) * Math.min((E / 1.15) ** 2, 4));
+  forCopies(starX, () => drawBgStars(starX, n, E), box);
+  return starC;
+}
+function blitLayer(c, img, W, H, B, rot, cd) {
+  if (cd) {
+    const pat = c.createPattern(img, 'repeat');
+    pat.setTransform(new DOMMatrix([geo.R * cd[0] / img.width, 0, 0, geo.R * cd[1] / img.height, W / 2, H / 2 - scrollAt(B) * geo.R]));
+    c.fillStyle = pat; c.fillRect(0, 0, W, H);
+  } else { c.save(); c.translate(W / 2, H / 2); c.rotate(rot); c.drawImage(img, -img.width / 2, -img.height / 2); c.restore(); }
+}
 function blitPicture(c, W, H, B, rot, cd, glow) {
   if (cd) {
     const sc = scrollAt(B);

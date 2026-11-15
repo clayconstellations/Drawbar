@@ -298,3 +298,5 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
 }
 /* Short phones: tighter rows, so the style with the most rows (Glitch) still fits */
 @media (max-height:640px) and (max-width:440px){ .page{gap:5px 16px} .panel{gap:5px} #optGroup .kl{display:none} .app{gap:6px; padding-block:6px} .main{gap:8px} }
+/* Light mode (Preferences): every colour turned over, hues kept. The whole page, drawing included. */
+html.light{filter:invert(1) hue-rotate(180deg)}

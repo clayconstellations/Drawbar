@@ -47,6 +47,7 @@ export function prepare(s) {
   if (s.pts.length < 2) { const q = s.pts[0]; s.pts.push([q[0] + 0.004, q[1], q[2] + 0.12, q[3]]); }
   s.color = clamp(s.color | 0, 0, MATS.length - 1);
   const p = s.pts, n = p.length, sz = s.size, M = MATS[s.color];
+  if (s.tint === '#15151c' && M.extra === 'bristle') s.tint = '#f2efe6';   // Paint's black became white when its canvas went dark (v30)
   const L = new Float32Array(n), sp = new Float32Array(n), nx = new Float32Array(n), ny = new Float32Array(n), xs = new Float32Array(n), ys = new Float32Array(n);
   for (let i = 0; i < n; i++) { xs[i] = p[i][0]; ys[i] = p[i][1]; }
   for (let i = 1; i < n; i++) {
@@ -99,7 +100,7 @@ export function prepare(s) {
       // Code: the cells the line passes through
       s._shape = glyphShape(glyphCells(lineSamples(xs, ys, w, n - 1, L), s.id), w0);
     } else if (s.tool === 'glow' && M.space) {
-      s._shape = spaceShape(M, s.id, { xs, ys, w, L, n, w0 });
+      s._shape = spaceShape(M, s.seed == null ? s.id : s.seed, { xs, ys, w, L, n, w0 }, null, s.L0 || 0);
     } else if (s.tool === 'glow' && M.micro) {
       // Micro: organisms grown along the line. See-through, so they neither hide strokes nor are hidden
       const pieces = growMicro(M.micro, M.keys, s.id, { xs, ys, nx, ny, w, L, n });

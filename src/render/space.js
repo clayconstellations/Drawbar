@@ -114,12 +114,18 @@ const galaxy = (color, v) => make('gal' + color + v, g => {
 // the colours themselves; only stars add light. To keep the stroke's line from showing, the cloud wanders off the
 // line, thins and thickens along it, and its stars, wisps and the odd planet scatter far out, fainter with distance.
 const PLANETS = ['#d9a066', '#8fb7e8', '#c9785a', '#b7a6d9', '#9ad0b0'];
-export function spaceShape(M, id, line, beads) {
-  const r = mulberry32(hash32(id, 808)), st = [], tw = [], dr = [], up = [], K = M.space, path = new Path2D();
+// L0: where this stroke starts along the stroke it was cut from (0 if never erased). Along a line, every knot of
+// stamps sits at a fixed place on that original line and is seeded by the place alone (v30), so erasing part of a
+// stroke removes the knots under the eraser and leaves every other one exactly as it was. (Before, each remaining
+// piece was seeded afresh from its own start, so one touch of the eraser rearranged the whole stroke.)
+export function spaceShape(M, id, line, beads, L0 = 0) {
+  let rr = mulberry32(hash32(id, 808)), rr2 = mulberry32(hash32(id, 809));
+  const r = () => rr(), r2 = () => rr2();
+  const st = [], tw = [], dr = [], up = [], K = M.space, path = new Path2D();
   // A planet: upright (see drawUpright), laid over, sized so its disc is r across
   const addPlanet = (x, y, rad) => { const q = Math.floor(r() * PLANETS.length * 6); up.push([planet(PLANETS[q % PLANETS.length], Math.floor(q / PLANETS.length) % 3, q % 2), x, y, rad / 0.6, 0.94, true]); };
   // Star brushes keep to the line you draw (v25): no wandering, no thin patches, a short scatter
-  const tight = K.kind === 'stars', r2 = mulberry32(hash32(id, 809));   // r2: seeds for v25's additions, so older parts stay as they were
+  const tight = K.kind === 'stars';   // r2: seeds for v25's additions, so older parts stay as they were
   const around = (x, y, d) => { const a = r() * TAU, k = d * Math.sqrt(r()); return [x + Math.cos(a) * k, y + Math.sin(a) * k]; };
   // Far scatter: most land near, a few very far (reach = how many R out the farthest go); returns [x, y, 0..1 distance]
   const far = (x, y, R, reach) => { const a = r() * TAU, u = Math.pow(r(), 1.7), d = R * (0.2 + reach * u); return [x + Math.cos(a) * d, y + Math.sin(a) * d, u]; };
@@ -134,10 +140,10 @@ export function spaceShape(M, id, line, beads) {
     if (K.kind === 'nebula') {
       { r2(); r2(); r2(); r2(); r2(); }   // (seeds once spent on v25's filaments, removed in v27: kept so drift stays as it was)
       // Slow drift: now and then a puff or a filament that wanders about its place (drawn each frame, see drawTwinkles)
-      if (r2() < 0.22 && dr.length < 7) { const fil = r2() < 0 * 0.35, [hx, hy] = [x + (r2() - 0.5) * R * 1.6, y + (r2() - 0.5) * R * 1.6]; dr.push([fil ? filament('#ffffff', Math.floor(r2() * 4)) : puff(r2() < 0.5 ? K.a : K.b, Math.floor(r2() * 3)), hx, hy, R * (fil ? 1.1 + 0.8 * r2() : 0.5 + 0.6 * r2()), r2() * TAU, 0.05 + 0.09 * r2(), R * (0.5 + 0.7 * r2()), fil ? ang + (r2() - 0.5) : r2() * TAU, fil ? 0.4 : 0.3]); }
-      const [ox, oy] = around(x, y, R * 0.7); st.push([puff(K.b, st.length % 3), ox, oy, R * (0.9 + 0.9 * r()), r() * TAU, 0.35 + 0.3 * r(), true]);
-      const [mx, my] = around(x, y, R * 0.4); st.push([puff(K.a, (st.length + 1) % 3), mx, my, R * (0.45 + 0.6 * r()), r() * TAU, 0.4 + 0.4 * r(), true]);
-      if (r() < 0.3) { const [wx, wy, u] = far(x, y, R, 2.6); st.push([puff(r() < 0.5 ? K.a : K.b, st.length % 3), wx, wy, R * (0.3 + 0.5 * r()), r() * TAU, 0.3 * (1 - 0.6 * u), true]); }   // outlying wisp
+      if (r2() < 0.22) { const fil = r2() < 0 * 0.35, [hx, hy] = [x + (r2() - 0.5) * R * 1.6, y + (r2() - 0.5) * R * 1.6]; dr.push([fil ? filament('#ffffff', Math.floor(r2() * 4)) : puff(r2() < 0.5 ? K.a : K.b, Math.floor(r2() * 3)), hx, hy, R * (fil ? 1.1 + 0.8 * r2() : 0.5 + 0.6 * r2()), r2() * TAU, 0.05 + 0.09 * r2(), R * (0.5 + 0.7 * r2()), fil ? ang + (r2() - 0.5) : r2() * TAU, fil ? 0.4 : 0.3]); }
+      const [ox, oy] = around(x, y, R * 0.7); st.push([puff(K.b, Math.floor(r() * 3)), ox, oy, R * (0.9 + 0.9 * r()), r() * TAU, 0.35 + 0.3 * r(), true]);
+      const [mx, my] = around(x, y, R * 0.4); st.push([puff(K.a, Math.floor(r() * 3)), mx, my, R * (0.45 + 0.6 * r()), r() * TAU, 0.4 + 0.4 * r(), true]);
+      if (r() < 0.3) { const [wx, wy, u] = far(x, y, R, 2.6); st.push([puff(r() < 0.5 ? K.a : K.b, Math.floor(r() * 3)), wx, wy, R * (0.3 + 0.5 * r()), r() * TAU, 0.3 * (1 - 0.6 * u), true]); }   // outlying wisp
       // Gas only (v28): the stars, planets and galaxies a nebula used to bring are made and thrown away, so the
       // clouds of existing drawings stay where they were
       const k0 = [st.length, tw.length, up.length];
@@ -167,16 +173,19 @@ export function spaceShape(M, id, line, beads) {
     const { xs, ys, w, L, n, w0 } = line, R0 = w0 * 4.5;
     // The cloud's centre line wanders either side of the drawn line, and its density swells and thins
     const p1 = r() * TAU, p2 = r() * TAU, p3 = r() * TAU, f1 = 1 / (R0 * (2.5 + 2 * r())), f2 = 1 / (R0 * (0.9 + 0.8 * r())), f3 = 1 / (R0 * (3 + 3 * r()));
-    let gap = 0, next = 0;
+    // Knots sit on a fixed grid along the original line, a third of a cloud's radius apart, each seeded by its place
+    const step = R0 * 0.34;
+    let gap = 0, kNext = Math.ceil((L0 - 1e-6) / step);
     for (let i = 0; i < n; i++) {
       path.moveTo(xs[i] + w[i], ys[i]); path.arc(xs[i], ys[i], Math.max(w[i], 1e-4), 0, TAU);
-      // One knot of stamps every third of a cloud's radius, so the cloud stays even whatever the drawing speed
-      if (L[i] < next && i < n - 1) continue;
+      const La = L0 + L[i];
+      if (La < kNext * step) continue;
+      const kk = Math.floor(La / step); kNext = kk + 1;
+      rr = mulberry32(hash32(id, kk, 808)); rr2 = mulberry32(hash32(id, kk, 809));
       const R = R0 * (0.5 + 0.5 * w[i] / (w0 * 1.35) + 0.2) * (0.7 + 0.6 * r());
-      next = L[i] + R * 0.34;
       const a = Math.max(i - 1, 0), b = Math.min(i + 1, n - 1), dx = xs[b] - xs[a], dy = ys[b] - ys[a], d = Math.hypot(dx, dy) || 1;
-      const off = tight ? 0 : R0 * (0.75 * Math.sin(L[i] * f1 + p1) + 0.4 * Math.sin(L[i] * f2 + p2)), x = xs[i] - dy / d * off, y = ys[i] + dx / d * off;
-      if (K.kind !== 'galaxy' && !tight && Math.sin(L[i] * f3 + p3) < -0.55 && r() < 0.75) { if (r() < 0.5) { tiny(x, y, R, '#ffffff'); if (K.kind === 'nebula') st.pop(); } continue; }   // a thin patch
+      const off = tight ? 0 : R0 * (0.75 * Math.sin(La * f1 + p1) + 0.4 * Math.sin(La * f2 + p2)), x = xs[i] - dy / d * off, y = ys[i] + dx / d * off;
+      if (K.kind !== 'galaxy' && !tight && Math.sin(La * f3 + p3) < -0.55 && r() < 0.75) { if (r() < 0.5) { tiny(x, y, R, '#ffffff'); if (K.kind === 'nebula') st.pop(); } continue; }   // a thin patch
       if (K.kind === 'galaxy') {
         if (gap <= 0) { st.push([galaxy(K.a, st.length % 3), ...around(x, y, R * 0.5), R * (0.6 + 0.6 * r()), r() * TAU, 1]); gap = 4 + Math.floor(r() * 4); }
         gap--; if (r() < 0.5) tiny(x, y, R * 1.5, '#ffffff');
@@ -234,7 +243,18 @@ export function drawTwinkles(X, strokes, hidden, S, maxDrift = 7) {
   }
   X.globalCompositeOperation = 'source-over'; X.globalAlpha = 1;
 }
-// Deep-field backdrop: black with a faint colour haze and hundreds of faint stars, drawn once and reused
+// The backdrop's faint stars, as one motif in the drawing's own space (v30). compose.js draws it once per copy into a
+// layer of its own, so the stars turn, fold, spiral and tile with the picture. n: how many stars per copy; E: half the
+// width of the square they are scattered over. Seeded: the same sky every time.
+export function drawBgStars(c, n, E) {
+  const r = mulberry32(2024);
+  for (let i = 0; i < n; i++) {
+    const x = (r() * 2 - 1) * E, y = (r() * 2 - 1) * E, s = 0.0012 + 0.0042 * r() * r(), a = 0.25 + 0.75 * r() * r();
+    c.fillStyle = `rgba(${200 + 55 * r() | 0},${205 + 50 * r() | 0},255,${a})`;
+    c.beginPath(); c.arc(x, y, s, 0, TAU); c.fill();
+  }
+}
+// Deep-field backdrop: black with a faint colour haze, drawn once and reused (its stars are a layer of their own)
 let bg = null;
 export function drawSpaceBg(ctx, W, H) {
   if (!bg) {
@@ -243,13 +263,12 @@ export function drawSpaceBg(ctx, W, H) {
     g.fillStyle = '#03040a'; g.fillRect(0, 0, 768, 768);
     g.globalCompositeOperation = 'lighter';
     for (const [x, y, rad, col] of [[200, 240, 420, 'rgba(40,24,90,0.35)'], [560, 520, 380, 'rgba(12,50,84,0.3)'], [420, 120, 260, 'rgba(84,24,50,0.2)']]) { const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 768, 768); }
-    for (let i = 0; i < 700; i++) { const x = r() * 768, y = r() * 768, s = 0.3 + 1.1 * r() * r(), a = 0.25 + 0.75 * r() * r(); g.fillStyle = `rgba(${200 + 55 * r() | 0},${205 + 50 * r() | 0},255,${a})`; g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill(); }
   }
   const k = Math.max(W, H);
   ctx.drawImage(bg, (W - k) / 2, (H - k) / 2, k, k);
 }
-// Old film over the whole view (Space): grain that jumps about 12 times a second, now and then a scratch or a speck.
-// One pattern fill per frame. Seeded by the frame count, so it is the same film every time. still: reduced motion.
+// Film grain over the whole view (Space), with a little warmth and falloff toward the edge. One pattern fill per
+// frame. The grain holds still and there are no scratches or specks (v30: both removed at the owner's request).
 let grain = null;
 export function drawFilm(ctx, W, H, now, still) {
   if (!grain) {
@@ -258,13 +277,10 @@ export function drawFilm(ctx, W, H, now, still) {
     for (let i = 0; i < d.length; i += 4) { const v = r(), lum = v < 0.5 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = lum; d[i + 3] = Math.floor(Math.pow(Math.abs(v - 0.5) * 2, 2.2) * 34); }
     g.putImageData(im, 0, 0);
   }
-  const f = still ? 0 : Math.floor(now / 83), h = hash32(f, 1927), pat = ctx.createPattern(grain, 'repeat');
-  const sc = Math.max(1, Math.round(Math.max(W, H) / 700));
-  pat.setTransform(new DOMMatrix([sc, 0, 0, sc, h % 256, (h >>> 8) % 256]));
+  const pat = ctx.createPattern(grain, 'repeat'), sc = Math.max(1, Math.round(Math.max(W, H) / 700));
+  pat.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0]));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
-  if (!still && h % 9 === 0) { ctx.fillStyle = 'rgba(255,250,235,0.16)'; ctx.fillRect((h >>> 4) % W, 0, sc, H); }                                   // a scratch
-  if (!still && h % 13 === 0) { ctx.fillStyle = 'rgba(8,6,4,0.5)'; ctx.beginPath(); ctx.arc((h >>> 6) % W, (h >>> 14) % H, sc * (1.5 + (h % 5)), 0, TAU); ctx.fill(); }   // a speck
   // a little warmth and falloff toward the edge, like an old print
   const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.56);
   v.addColorStop(0, 'rgba(255,214,170,0.035)'); v.addColorStop(1, 'rgba(0,0,0,0.3)');

@@ -99,7 +99,7 @@ export function extraPieces(s, kind, xs, ys, nx, ny, w, L, n, w0) {
     // width follows it, so hairs thin to a point as they run out instead of stopping in blocks (v27: at small sizes
     // the old on/off dashes all came out the same length). Slow strokes come out full, fast ones dry and streaky.
     // Hairs are one size whatever the brush: a bigger brush has more of them (v28), about 24 at the default size
-    const B = out.br = new Path2D(), nb = Math.round(Math.min(72, Math.max(6, w0 / 0.00115))), len = L[n - 1] || 1e-6, step = Math.max(1, Math.floor(n / 90)), sp = s._sp, seed = hash32(s.id, 5);
+    const B = out.br = new Path2D(), nb = Math.round(Math.min(72, Math.max(6, w0 / 0.00115))), len = L[n - 1] || 1e-6, step = Math.max(1, Math.floor(n / 160)), sp = s._sp, seed = hash32(s.id, 5);
     const vn = (x, k) => { const q = Math.floor(x), f = x - q, t = f * f * (3 - 2 * f), a = hash32(seed, k, q) % 1024 / 1024, b = hash32(seed, k, q + 1) % 1024 / 1024; return a + (b - a) * t; };
     const grain = Math.max(w0 * 2.5, 0.022);   // how long the wet and dry runs are; never shorter than this on thin brushes
     for (let b = 0; b < nb; b++) {
@@ -112,16 +112,27 @@ export function extraPieces(s, kind, xs, ys, nx, ny, w, L, n, w0) {
         const m = 1.05 - u / load - 0.8 * Math.min(sp[i] / 2.5, 1) - 0.85 * vn(L[i] / run, b) - split - edge * 0.12 + 0.45;
         return m <= 0 ? 0 : Math.pow(Math.min(m / 0.3, 1), 0.6);
       };
-      let a = 0, ka = kAt(0);
-      for (let i = step; a < n - 1; i += step) {
-        const e = Math.min(i, n - 1), ke = kAt(e);
-        if (ka > 0 || ke > 0) {
-          const la = lat * w[a] * 0.96, lb = lat * w[e] * 0.96, ax = xs[a] + nx[a] * la, ay = ys[a] + ny[a] * la, bx = xs[e] + nx[e] * lb, by = ys[e] + ny[e] * lb;
-          const dx = bx - ax, dy = by - ay, dl = Math.hypot(dx, dy) || 1e-6, ha = w[a] * wide * ka, hb = w[e] * wide * ke, ux = dx / dl, uy = dy / dl, o = dl * 0.1;
-          B.moveTo(ax - ux * o + uy * ha, ay - uy * o - ux * ha); B.lineTo(bx + ux * o + uy * hb, by + uy * o - ux * hb); B.lineTo(bx + ux * o - uy * hb, by + uy * o + ux * hb); B.lineTo(ax - ux * o - uy * ha, ay - uy * o + ux * ha); B.closePath();
+      // Each run of ink is one ribbon: up one side of the hair and back down the other. (Until v29 every step was its
+      // own four-cornered piece overlapping the next; on a bend their corners stuck out at the same places on every
+      // hair, which showed as fine lines across the stroke.)
+      const lx = [], ly = [], rx = [], ry = [];
+      const close = () => {
+        if (lx.length > 1) { B.moveTo(lx[0], ly[0]); for (let q = 1; q < lx.length; q++) B.lineTo(lx[q], ly[q]); for (let q = rx.length - 1; q >= 0; q--) B.lineTo(rx[q], ry[q]); B.closePath(); }
+        lx.length = ly.length = rx.length = ry.length = 0;
+      };
+      let prev = 0;
+      for (let i = 0; ; i += step) {
+        const e = Math.min(i, n - 1), k = kAt(e);
+        if (k > 0 || prev > 0) {
+          if (!lx.length && e > 0 && k > 0) { const a = Math.max(0, e - step), la = lat * w[a] * 0.96; lx.push(xs[a] + nx[a] * la); ly.push(ys[a] + ny[a] * la); rx.push(lx[0]); ry.push(ly[0]); }   // starts from a point
+          const l = lat * w[e] * 0.96, h = w[e] * wide * k, cx = xs[e] + nx[e] * l, cy = ys[e] + ny[e] * l;
+          lx.push(cx + nx[e] * h); ly.push(cy + ny[e] * h); rx.push(cx - nx[e] * h); ry.push(cy - ny[e] * h);
         }
-        a = e; ka = ke;
+        if (k <= 0) close();
+        prev = k;
+        if (e === n - 1) break;
       }
+      close();
     }
   }
   if (kind === 'vine') {

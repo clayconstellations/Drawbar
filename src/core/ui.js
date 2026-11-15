@@ -22,6 +22,7 @@ export const change = fn => { checkpoint(); fn(); rebuild(); syncUI(); };
 // Preferences
 export const settings = $('settings');
 export const openSettings = open => { settings.hidden = !open; for (const b of document.querySelectorAll('.cogbtn')) b.setAttribute('aria-expanded', String(open)); };
+export const applyLight = () => document.documentElement.classList.toggle('light', !!prefs.light);
 export const showGlide = () => { $('prGlide').value = prefs.glide; $('prGlideOut').textContent = (prefs.glide / 1000).toFixed(1) + ' s'; };
 export function applyView() {
   for (const b of $('shapeSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === prefs.shape));
@@ -219,9 +220,11 @@ export function initControls() {
   $('closeSettings').addEventListener('click', () => openSettings(false));
   document.addEventListener('pointerdown', e => { if (!settings.hidden && !settings.contains(e.target) && !e.target.closest('.cogbtn')) openSettings(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { openSettings(false); openStyles(false); $('exportDlg').hidden = true; setVisual(false); } });
-  for (const [id, k] of [['prTempo', 'rTempo'], ['prMode', 'rMode'], ['prFolds', 'rFolds']]) {
+  // Light mode turns every colour in the app over (dark to light, hues kept). Picture only: the sound never changes.
+  applyLight();
+  for (const [id, k] of [['prTempo', 'rTempo'], ['prMode', 'rMode'], ['prFolds', 'rFolds'], ['prSmooth', 'smooth'], ['prLight', 'light']]) {
     $(id).checked = !!prefs[k];
-    $(id).addEventListener('change', e => { prefs[k] = e.target.checked; savePrefs(); });
+    $(id).addEventListener('change', e => { prefs[k] = e.target.checked; savePrefs(); applyLight(); });
   }
   $('prGlide').addEventListener('input', e => { prefs.glide = +e.target.value; showGlide(); savePrefs(); });
   showGlide();

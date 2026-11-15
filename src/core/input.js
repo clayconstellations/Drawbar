@@ -2,7 +2,7 @@
 import { eraseTester, fs, tiled } from '../canvas/index.js';
 import { isVisual } from './layout.js';
 import { rebuild, strokeAdded } from './settings.js';
-import { checkpoint, redoStack, score, takeId, ui, undoStack } from './state.js';
+import { checkpoint, prefs, redoStack, score, takeId, ui, undoStack } from './state.js';
 import { prepare, smoothStroke } from './stroke.js';
 import { TOOL, brushSize, stampRadius } from './tools.js';
 import { clamp } from './math.js';
@@ -32,7 +32,7 @@ export function unrot(v) {
 export const pressureOf = e => e.pointerType === 'pen' ? (e.pressure || 0.5) : 0.5;
 export function addPoint(e) {
   const p = unrot(toScreen(e)), t = Math.max(e.timeStamp / 1000 - cur.t0, cur.pts[cur.pts.length - 1][2]);
-  cur.sx += (p.x - cur.sx) * 0.25; cur.sy += (p.y - cur.sy) * 0.25;
+  { const k = prefs.smooth === false ? 1 : 0.25; cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
   const last = cur.pts[cur.pts.length - 1];
   if (Math.hypot(cur.sx - last[0], cur.sy - last[1]) > 0.003) cur.pts.push([cur.sx, cur.sy, t, pressureOf(e)]);
 }
@@ -49,18 +49,20 @@ export function eraseAt(p) {
     const keep = s.pts.map(pt => !hit(pt));
     if (keep.every(Boolean)) { next.push(s); continue; }
     changed = true;
-    let run = [];
+    let run = [], at = 0;   // at: where the run starts in the stroke
     const flush = () => {
       let rl = 0;
       for (let i = 1; i < run.length; i++) rl += Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]);
       if (run.length >= 3 && rl > 0.025) {
         const t0 = run[0][2];
-        const piece = { id: next.some(x => x.id === s.id) ? takeId() : s.id, tool: s.tool, color: s.color, size: s.size, fx: s.fx, tint: s.tint, pts: run.map(q => [q[0], q[1], q[2] - t0, q[3]]), start: s.start, startBeat: s.startBeat };
+        const piece = { id: next.some(x => x.id === s.id) ? takeId() : s.id, tool: s.tool, color: s.color, size: s.size, fx: s.fx, tint: s.tint, pts: run.map(q => [q[0], q[1], q[2] - t0, q[3]]), start: s.start, startBeat: s.startBeat,
+          // seeded details (Space) stay where they were: the piece keeps the first stroke's seed and its place along it
+          pt: s.pt, head: s.head, seed: s.seed == null ? s.id : s.seed, L0: (s.L0 || 0) + (s._L ? s._L[at] : 0) };
         prepare(piece); next.push(piece);
       }
       run = [];
     };
-    s.pts.forEach((pt, i) => { if (keep[i]) run.push(pt); else flush(); });
+    s.pts.forEach((pt, i) => { if (keep[i]) { if (!run.length) at = i; run.push(pt); } else flush(); });
     flush();
   }
   if (changed) { score.strokes = next; erasing.touched = true; redrawSoon(); }
@@ -75,7 +77,7 @@ export function finishStroke(e) {
   const p = unrot(toScreen(e)), last = cur.pts[cur.pts.length - 1];
   const t = Math.max(e.timeStamp / 1000 - cur.t0, last[2]);
   if (Math.hypot(p.x - last[0], p.y - last[1]) > 0.002) cur.pts.push([p.x, p.y, t, pressureOf(e)]);
-  const pts = cur.pts.length > 2 ? smoothStroke(cur.pts, cur.size) : cur.pts;
+  const pts = cur.pts.length > 2 && prefs.smooth !== false ? smoothStroke(cur.pts, cur.size) : cur.pts;
   const S = sessionNow();
   const s = { id: cur.sid, tool: TOOL[cur.tool].as || cur.tool, head: cur.tool === 'trace' || undefined, pt: cur.pt, color: cur.color, size: cur.size, fx: MATS[cur.color].live ? score.fx : undefined, tint: cur.tint, pts, start: S, startBeat: Math.round(beatAt(S) * 4) / 4 };
   cur = null;
