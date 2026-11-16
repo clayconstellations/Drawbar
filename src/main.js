@@ -26,8 +26,8 @@ initControls();
 rearrange();
 {
   let pend = 0;
-  const ro = new ResizeObserver(() => { if (!pend) pend = requestAnimationFrame(() => { pend = 0; layout(); const p = $('pager'); p.scrollLeft = (+p.dataset.i || 0) * p.clientWidth; }); });
-  for (const id of ['main', 'panel']) ro.observe($(id));
+  const ro = new ResizeObserver(() => { if (!pend) pend = requestAnimationFrame(() => { pend = 0; layout(); }); });
+  for (const id of ['main', 'panel', 'musicPane', 'left']) ro.observe($(id));
 }
 // Reopen the style tab used last time
 // (once, the first time v27 runs, everyone starts in Paint, the new default)

@@ -5,7 +5,7 @@
 export default {
   id: 'paint', name: 'Paint',
   mats: ['Brush ink'],
-  colors: ['#f2efe6', '#4d74e6', '#c8281e', '#e2681c', '#d9a514', '#2f8f4e', '#2f7fd6', '#7a48c8', '#d6468f', '#b8794a'],
+  colors: ['#f2efe6', '#4d74e6', '#c8281e', '#e2681c', '#d9a514', '#2f8f4e', '#2f7fd6', '#7a48c8', '#d6468f'],   // nine, for the 3 x 3 colour grid
   tools: ['glow', 'erase'],
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 40, copies: 6, tiles: 4, turns: 3, rotate: true },

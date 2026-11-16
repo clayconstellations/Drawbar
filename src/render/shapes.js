@@ -202,3 +202,21 @@ export function centerPath(xs, ys, i0, i1, step) {
   path.lineTo(xs[i1], ys[i1]);
   return path;
 }
+// A dab of the paint brush (a tap): the hairs pressed down and splayed, not a disc. Each hair is a thin sliver lying
+// roughly along one direction, blunt where the brush landed and running out to a point; they fan out a little, a few
+// are missing, a few run long as stray hairlines. The outline is an uneven oval, different for every tap.
+export function dabPath(x, y, rr, seed) {
+  const r = mulberry32(seed), P = new Path2D(), th = r() * TAU, c = Math.cos(th), s = Math.sin(th);
+  const nb = Math.round(Math.min(56, Math.max(8, rr / 0.0012))), R = rr * 1.02, lean = (r() - 0.5) * 0.5;
+  const at = (u, v) => [x + (u * c - v * s) * R, y + (u * s + v * c) * R];   // u along the hairs, v across them
+  for (let b = 0; b < nb; b++) {
+    if (r() < 0.04) { r(); r(); r(); r(); continue; }   // a gap between hairs
+    const lat = ((b + 0.5) / nb) * 2 - 1 + (r() - 0.5) * 0.06, chord = Math.sqrt(Math.max(0.02, 1 - lat * lat));
+    const stray = r() < 0.08, u0 = -chord * (0.8 + 0.22 * r()) + lean * lat, u1 = chord * (0.78 + 0.34 * r()) * (stray ? 1.3 : 1) + lean * lat;
+    const hw = (stray ? 0.5 : 1.35 + 0.6 * r()) / nb, fan = 1 + 0.1 * (u1 - u0), v0 = lat * 0.8, v1 = lat * 0.8 * fan + (r() - 0.5) * 0.05;
+    const um = u0 + (u1 - u0) * 0.82, vm = v0 + (v1 - v0) * 0.82;
+    const pts = [at(u0, v0 - hw), at(um, vm - hw * 0.9), at(u1, v1), at(um, vm + hw * 0.9), at(u0, v0 + hw), at(u0 - hw * 0.8, v0)];
+    P.moveTo(pts[0][0], pts[0][1]); for (let q = 1; q < pts.length; q++) P.lineTo(pts[q][0], pts[q][1]); P.closePath();
+  }
+  return P;
+}

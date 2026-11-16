@@ -7,7 +7,7 @@
 export default {
   id: 'materials', name: 'Materials',
   mats: ['Liquid metal', 'Brushed metal', 'Strawberry', 'Clay', 'Wax', 'Rubber', 'Pearl', 'Glass', 'Cloud', 'Slime'],   // shown as Metal, Brushed, Cream, Clay, Wax, Rubber, Pearl, Glass, Cloud, Slime; the colour picker tints them
-  colors: ['#aab1ba', '#e2b24a', '#f39bbd', '#f08a5c', '#f7da7a', '#79c832', '#94ddc6', '#98bff0', '#b79cf0', '#eef1f6'],
+  colors: ['#aab1ba', '#e2b24a', '#f39bbd', '#f08a5c', '#79c832', '#94ddc6', '#98bff0', '#b79cf0', '#eef1f6'],
   tools: ['glow', 'beads', 'erase'],
   modes: ['free', 'tiles'],
   limits: { strokes: 24, copies: 0, tiles: 4, turns: 1, rotate: true },

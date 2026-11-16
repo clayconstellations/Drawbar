@@ -11,7 +11,7 @@ export default {
   tools: ['glow', 'loop', 'trace', 'ripple', 'erase'],
   modes: ['free', 'tiles'],
   // Tiles: up to 3 across and no turns. Every stroke is redrawn every frame in every copy, so copies are kept few.
-  limits: { strokes: 16, copies: 0, tiles: 3, turns: 0, rotate: false },
+  limits: { strokes: 16, copies: 0, tiles: 3, turns: 1, rotate: false },   // turns: 1 or 2 (v31; 2 doubles what is drawn each frame)
   start: { mode: 'free', copies: 2, spiral: 0, tiles: 3, turns: 0, mirror: false, fscale: 50, frot: false, fmirror: false, fx: 'smear', tool: 'glow', color: 'Solids' },
   options: { fx: true },
   render: { grid: true },

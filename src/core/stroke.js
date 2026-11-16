@@ -1,6 +1,6 @@
 // Stroke geometry: smoothing, and all per-stroke derived data (the _ prefixed fields) made by prepare(s)
 import { TAU, clamp, hash32, mod, mulberry32 } from './math.js';
-import { buildShape, capsAlong, cloudPuffs, dripsFor, extraPieces, geoChain } from '../render/shapes.js';
+import { buildShape, capsAlong, cloudPuffs, dabPath, dripsFor, extraPieces, geoChain } from '../render/shapes.js';
 import { MATS } from '../styles/index.js';
 import { TOOL } from './tools.js';
 import { glyphCells, glyphShape, lineSamples } from '../render/glyphs.js';
@@ -167,7 +167,7 @@ export function prepare(s) {
   }
   if (s._dot && (M.glyph || M.plant || M.space || M.micro)) { shapeFromBeads(s, M, [{ x: p[0][0], y: p[0][1], r: (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz }]); return; }
   if (s._dot) { const rr = (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz; s._shape = buildShape([], [M.geo ? [p[0][0], p[0][1], rr * M.geo.bead, M.geo.sides, M.geo.spin] : [p[0][0], p[0][1], rr]], M.ks, rr, M.comic ? 0.26 * rr : (M.ink || 0) * rr); }
-  if (s._dot && M.extra === 'bristle') s._shape.paths.br = s._shape.paths[1];   // a dab of the brush
+  if (s._dot && M.extra === 'bristle') s._shape.paths.br = dabPath(p[0][0], p[0][1], NEON_W * 1.4 * sz, hash32(s.id, 6)), s._shape.noHide = true;   // a dab of the brush
 }
 // Code cells or garden blooms at points (Beads, and single dots)
 function shapeFromBeads(s, M, beads) {

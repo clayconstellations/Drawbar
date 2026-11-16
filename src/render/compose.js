@@ -390,7 +390,7 @@ export function drawPreview(X, S, B, now) {
   if (M.live || world().render.sprites || world().render.preview) {
     if (cur._pvN !== cur.pts.length) {
       const t = { id: cur.sid, tool: 'glow', color: cur.color, tint: cur.tint, size: sz, fx: score.fx, pt: cur.pt, pts: cur.pts };
-      prepare(t); cur._pv = t; cur._pvN = cur.pts.length;
+      prepare(t); t._pv = true; cur._pv = t; cur._pvN = cur.pts.length;
     }
     const t = cur._pv;
     if (M.live) { drawLive(X, t, S, B, now, NOPULSE); return; }
@@ -407,7 +407,9 @@ export function drawPreview(X, S, B, now) {
 }
 const NOPULSE = { drum: 0, by: new Map() };
 export function drawGuides(B, rot) {
-  if (world().render.bg === 'paper' || world().render.noGuides) return;   // plain paper: no fold or tile lines (they read as seams)
+  // No fold or tile lines in any style (v31: on the dark canvas they read as faint seams). Only Glitch's code grid is left.
+  // (The legacy Classic world keeps them under the equivalence test, so its pixels still match v18.)
+  if (!(score.mode === 'free' && world().render.grid) && !(syncDraw && world().legacy)) return;
   const m = score.mode, ext = Math.hypot(geo.W, geo.H) / 2 / geo.R + 0.05;
   ctx.strokeStyle = world().render.bg ? 'rgba(70,60,100,0.14)' : '#1c2132'; ctx.lineWidth = 0.003; ctx.beginPath();
   if (m === 'kaleido' && score.spiral < 0.04) {

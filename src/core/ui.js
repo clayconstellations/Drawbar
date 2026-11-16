@@ -18,6 +18,7 @@ import { switchWorld } from './settings.js';
 import { TABS, WORLDS, world } from '../worlds/index.js';
 
 export const mapInput = $('mapInput');
+let lastTool = 'glow';
 export const change = fn => { checkpoint(); fn(); rebuild(); syncUI(); };
 // Preferences
 export const settings = $('settings');
@@ -47,9 +48,6 @@ export function openStyles(open) {
     list.style.top = Math.max(8, r.top - h - 6) + 'px';
   }
 }
-// The bottom pane's pages: 0 = Draw, 1 = Sound
-export function showPane(i, smooth) { const p = $('pager'); p.scrollTo({ left: i * p.clientWidth, behavior: smooth ? 'smooth' : 'auto' }); }
-const paneNow = () => { const p = $('pager'); return Math.round(p.scrollLeft / Math.max(p.clientWidth, 1)); };
 export function syncSound() {
   const on = playing && !paused;
   $('playBtn').classList.toggle('paused', !on);
@@ -79,7 +77,7 @@ export function syncUI() {
   $('styleName').textContent = w.name;
   for (const md of MODES) $('mode-' + md.id).hidden = !w.modes.includes(md.id);
   for (const t of TOOLS) $('tool-' + t.id).hidden = !w.tools.includes(t.id);
-  $('tools').classList.toggle('many', w.tools.length > 5); $('drawRow').classList.toggle('many', w.tools.length > 3);
+  $('tools').classList.toggle('many', w.tools.filter(x => x !== 'erase').length > 4);
   $('swatches').parentElement.hidden = w.matIdx.length < 2;   // one brush: nothing to pick
   // Effect brushes (they work on what is beneath them) are square, after a divider
   { const first = w.matIdx.find(i => MATS[i].under); MATS.forEach((M, i) => { const b = $('sw-' + i); b.hidden = !w.matIdx.includes(i); b.style.order = w.matIdx.indexOf(i); b.classList.toggle('fxfirst', i === first); }); }
@@ -98,7 +96,9 @@ export function syncUI() {
   for (const t of TOOLS) $('tool-' + t.id).setAttribute('aria-pressed', String(ui.tool === t.id));
   // Colour picker (tabs with a palette): rebuilt when the tab changes; brush swatches are shown in the colour picked
   const cg = $('colors');
-  $('colorGroup').hidden = !w.colors; $('matLabel').textContent = w.colors ? 'Brush' : 'Material';
+  $('colorGroup').hidden = !w.colors;
+  // A style whose brushes are plain colours (Geometric) shows them in the same 3 x 3 grid as the colour picker
+  $('swatches').classList.toggle('grid9', !!(w.options && w.options.gridMats));
   if (w.colors) {
     if (!w.colors.includes(ui.tint)) ui.tint = w.colors[0];
     if (cg.dataset.world !== w.id) {
@@ -131,9 +131,6 @@ export function initControls() {
   // The style picker: one button showing the current style; tap for the list
   $('styleBtn').addEventListener('click', () => openStyles($('worldTabs').hidden));
   document.addEventListener('pointerdown', e => { if (!$('worldTabs').hidden && !e.target.closest('.stylewrap')) openStyles(false); });
-  // Draw / Sound: the toggle scrolls the pane; swiping it moves the toggle
-  $('pageSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v != null) showPane(+v, true); });
-  $('pager').addEventListener('scroll', () => { const i = paneNow(); $('pager').dataset.i = i; for (const b of $('pageSeg').children) b.setAttribute('aria-pressed', String(+b.dataset.v === i)); openStyles(false); }, { passive: true });
   // Key and scale
   $('keySel').addEventListener('change', e => change(() => { score.key = +e.target.value; applyKeyScale(); }));
   $('scaleSel').addEventListener('change', e => change(() => { score.scale = +e.target.value; applyKeyScale(); }));
@@ -149,8 +146,9 @@ export function initControls() {
     const b = document.createElement('button');
     b.className = 'tool'; b.id = 'tool-' + t.id;
     b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg><span>${t.name}</span>`;
-    b.addEventListener('click', () => { ui.tool = t.id; syncUI(); });
-    $('tools').appendChild(b);
+    b.addEventListener('click', () => { if (t.id === 'erase' && ui.tool === 'erase') ui.tool = lastTool; else { if (ui.tool !== 'erase') lastTool = ui.tool; ui.tool = t.id; } syncUI(); });
+    // The eraser lives in the drawing's bottom right corner; tapping it again goes back to the tool before
+    (t.id === 'erase' ? $('eraseSlot') : $('tools')).appendChild(b);
   });
   PALETTE.forEach((c, i) => {
     const b = document.createElement('button');
@@ -171,7 +169,7 @@ export function initControls() {
     $('modeSeg').appendChild(b);
   });
   $('modeSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v && v !== score.mode) change(() => score.mode = v); });
-  $('fxSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v && v !== score.fx) { score.fx = v; syncUI(); } });   // applies to the strokes drawn next
+  $('fxSeg').addEventListener('click', e => { let v = e.target.closest('button')?.dataset.v; if (!v) return; if (v === score.fx) v = v === 'smear' ? 'jitter' : 'smear'; score.fx = v; syncUI(); });   // tapping the one in hand switches (on a phone only that one shows)   // applies to the strokes drawn next
   $('timeSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v && v !== score.timing) change(() => score.timing = v); });
   $('instSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v && v !== score.inst) change(() => score.inst = v); });
   $('mirrorBtn').addEventListener('click', () => change(() => { if (score.mode === 'free') score.fmirror = !score.fmirror; else score.mirror = !score.mirror; }));

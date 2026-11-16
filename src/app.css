@@ -35,14 +35,6 @@ body{
 .kn, .bpm, .sizedot{touch-action:none}
 .soundrow{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px; width:100%}
 .pick{font:inherit; font-weight:600; color:var(--fg); background:var(--raise); border:1px solid var(--line); border-radius:8px; height:40px; padding:0 8px; max-width:150px}
-@media (min-width:880px) and (min-aspect-ratio:5/4){
-  .main{flex-direction:row; gap:28px}
-  .left{flex:1; height:100%}
-  .panel{width:304px; flex:none; align-items:stretch; gap:12px}
-  .pageseg{align-self:center}
-  .page{flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:flex-start; gap:16px}
-  .page .knobs.sound{gap:4px; padding:8px 4px} .page .kwrap.big{width:68px}
-}
 
 /* Visual only: the drawing and nothing else, filling the screen. Tap to come back. */
 .app.visual .top, .app.visual .knobs, .app.visual .panel{display:none}
@@ -51,11 +43,7 @@ body{
 .app.visual #cv{border-radius:0}
 
 /* Top bar */
-/* The pattern row lives in the top section (v29): always in view, above the drawing. A row of its own, centred;
-   on a wide screen it sits in the bar itself, between the name and the buttons. */
-.top .pattern{flex:1 0 100%; align-items:center}
-.top .pattern h2{display:none}
-@media (min-width:1080px){ .top .pattern{flex:0 0 auto; order:0; margin-right:auto} .top .brand{order:-1} }
+
 .top{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; min-width:0; flex:none}
 .brand{font-family:var(--display); font-weight:700; font-size:20px; letter-spacing:.01em; padding-block:6px; margin-right:auto}
 .cluster{display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0}
@@ -208,7 +196,6 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
 .drawrow.many .stylewrap{grid-column:2}
 .drawrow.many .sizedot{grid-column:3}
 /* Wide enough for one row after all (tablet portrait, phone on its side) */
-@media (min-width:700px){ .drawrow.many .tools{grid-column:auto; justify-self:end} .drawrow.many .stylewrap, .drawrow.many .sizedot{grid-column:auto} }
 .sizedot{flex:none; width:54px; height:54px; border-radius:50%; touch-action:none; cursor:ns-resize}
 .sizedot canvas{display:block; width:100%; height:100%}
 .sizedot.dragging{outline:2px solid var(--ink); outline-offset:2px}
@@ -221,14 +208,6 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
 .sw.pixtoggle::after{content:none}
 .sw.pixtoggle svg{width:70%; height:70%}
 .sw.pixtoggle[aria-pressed="true"]{color:var(--ink); border-color:var(--ink)}
-@media (min-width:880px) and (min-aspect-ratio:5/4){
-  .group h2{display:block}
-  
-  .drawgroup{flex:none} .drawrow:not(.many) .tools{justify-self:stretch} .tools .tool{flex:1 1 0}
-  .drawrow.many .tools{grid-column:1 / -1; justify-self:stretch} .drawrow.many .stylewrap{grid-column:2} .drawrow.many .sizedot{grid-column:3}
-  .swatches{grid-template-columns:repeat(10, minmax(0, 1fr)); gap:4px}
-  .sw{width:100%; height:auto; aspect-ratio:1; min-height:0}
-}
 @media (max-width:440px){ .swatches{grid-template-columns:repeat(10, minmax(0, 32px)); gap:4px} .sw{width:100%; height:auto; aspect-ratio:1; min-height:0} }
 
 /* Clips page */
@@ -300,3 +279,97 @@ input[type=range]::-moz-range-thumb{width:24px; height:24px; border-radius:50%; 
 @media (max-height:640px) and (max-width:440px){ .page{gap:5px 16px} .panel{gap:5px} #optGroup .kl{display:none} .app{gap:6px; padding-block:6px} .main{gap:8px} }
 /* Light mode (Preferences): every colour turned over, hues kept. The whole page, drawing included. */
 html.light{filter:invert(1) hue-rotate(180deg)}
+
+/* ===== v31: one screen. Music controls above the drawing, drawing controls below it; on a wide screen they sit
+   either side of it instead, so the drawing stays in the middle and as large as it can be. ===== */
+.main{gap:8px}
+.left{flex:1 1 0; min-height:0; overflow:hidden; gap:0}
+.music{display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 14px; width:100%; flex:none}
+.music .knobs.sound{border:0; background:none; padding:0; gap:clamp(6px, 3vw, 22px)}
+.music .kn.big{width:44px; height:44px} .music .kwrap.big{width:64px} .music .kn.big .kv{font-size:13px}
+.music .soundrow{width:auto; flex-wrap:nowrap; gap:6px}
+.music .bpm{height:38px} .music .pick{height:38px; padding:0 4px; max-width:112px; font-size:13px}
+.panel{flex:none; gap:8px}
+.panel .pattern{align-items:center} .panel .pattern h2{display:none}
+/* Map number and dice share one box: they go together */
+.mapbox{display:flex; align-items:center; background:var(--raise); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.mapbox #mapInput{border:0; background:transparent; border-radius:0}
+.mapbox #dice{border:0; border-left:1px solid var(--line); border-radius:0; background:transparent}
+.top .brand{margin-right:auto}
+/* The four corners of the drawing's square, outside the circle: undo, redo, size, eraser */
+.stage{position:relative}
+.corner{position:absolute; width:var(--corner, 44px); height:var(--corner, 44px); min-height:0; padding:0; border-radius:50%; display:grid; place-items:center; z-index:2}
+.corner.tl{left:0; top:0} .corner.tr{right:0; top:0} .corner.bl{left:0; bottom:0} .corner.br{right:0; bottom:0}
+.corner svg{width:46%; height:46%}
+#eraseSlot .tool{width:100%; height:100%; border-radius:50%; flex:none}
+#eraseSlot .tool span{display:none} #eraseSlot .tool svg{width:48%; height:48%}
+.sizedot.corner{width:var(--corner, 44px); height:var(--corner, 44px)}
+.app.visual .corner{display:none}
+/* Tools, effect and style share a row */
+.drawrow{display:flex; align-items:center; justify-content:center; gap:8px; width:100%}
+.drawrow .tools{justify-self:auto; gap:5px}
+.drawrow .tool{height:44px; width:46px}
+.stylebtn{min-height:44px}
+/* Brushes (and their options) beside the colours */
+.pickrow{display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-width:0}
+.pickcol{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; flex:0 1 auto}
+.pickcol .swatches{display:flex; flex-wrap:wrap; justify-content:center; gap:4px}
+.pickcol .sw{width:28px; height:28px; flex:none}
+#optGroup h2{display:none}
+#optGroup .kl{display:none} #optGroup .kn{width:36px; height:36px}
+/* Colours: nine in a 3 x 3 grid with no gaps, in one square; the one in hand breathes */
+#colors, .swatches.grid9{display:grid; grid-template-columns:repeat(3, 26px); gap:0; border:1px solid #3a4160; border-radius:8px; overflow:visible; flex:none; background:#3a4160}
+#colors .sw, .swatches.grid9 .sw{width:26px; height:26px; min-height:0; border:0; border-radius:0; aspect-ratio:auto}
+#colors .sw::after, .swatches.grid9 .sw::after{inset:0; border-radius:0; box-shadow:none}
+#colors .sw:nth-child(1)::after, .swatches.grid9 .sw.c1::after{border-top-left-radius:7px} #colors .sw:nth-child(3)::after, .swatches.grid9 .sw.c3::after{border-top-right-radius:7px}
+#colors .sw:nth-child(7)::after, .swatches.grid9 .sw.c7::after{border-bottom-left-radius:7px} #colors .sw:nth-child(9)::after, .swatches.grid9 .sw.c9::after{border-bottom-right-radius:7px}
+#colors .sw[aria-pressed="true"], .swatches.grid9 .sw[aria-pressed="true"]{z-index:1}
+#colors .sw[aria-pressed="true"]::after, .swatches.grid9 .sw[aria-pressed="true"]::after{outline:2px solid var(--fg); outline-offset:-1px; box-shadow:0 0 10px 2px var(--c); animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{ 0%,100%{box-shadow:0 0 5px 0 var(--c)} 50%{box-shadow:0 0 16px 5px var(--c)} }
+@media (prefers-reduced-motion: reduce){ #colors .sw[aria-pressed="true"]::after, .swatches.grid9 .sw[aria-pressed="true"]::after{animation:none} }
+/* Narrow phones */
+@media (max-width:372px){
+  .music .kwrap.big{width:54px} .music .soundrow{gap:4px} .music .pick{max-width:92px; padding:0 2px} .music .bpm{width:auto; padding:0 6px}
+  .drawrow{gap:5px} .drawrow .tool{width:38px; height:40px} .drawrow .tool span{display:none} .seg.fx button{padding:0 6px; font-size:12px} .stylebtn{min-height:40px; font-size:13px; padding:0 9px}
+  .pickrow{gap:6px} .pickcol .sw{width:24px; height:24px} .pickcol .swatches{gap:3px}
+  #colors, .swatches.grid9{grid-template-columns:repeat(3, 24px)} #colors .sw, .swatches.grid9 .sw{width:24px; height:24px}
+}
+@media (max-width:440px){ .drawrow .tool span{display:none} .drawrow .tool{width:42px} .pickcol .sw{aspect-ratio:auto} }
+/* Wide screens: music to the left of the drawing, drawing controls to the right */
+@media (min-width:700px) and (min-aspect-ratio:5/4){
+  .main{flex-direction:row; align-items:center; gap:18px}
+  .music{flex:none; width:150px; flex-direction:column; gap:14px}
+  .music .knobs.sound{display:grid; grid-template-columns:1fr 1fr; gap:10px 6px}
+  .music .soundrow{flex-direction:column; flex-wrap:nowrap; gap:8px; align-items:center}
+  .music .pick{max-width:140px; width:130px}
+  .left{height:100%}
+  .panel{width:300px; flex:none; gap:14px}
+  .prow{flex-wrap:wrap; justify-content:center; row-gap:8px}
+  .drawrow{flex-wrap:wrap}
+  .pickrow{flex-wrap:wrap}
+}
+@media (max-height:460px){
+  .music{gap:6px} .music .kwrap.big{width:56px} .panel{gap:6px}
+}
+/* Phones: the effect shows only the one in hand (tap it to switch); brushes shrink to share a row with the colours */
+@media (max-width:440px){
+  .seg.fx button[aria-pressed="false"]{display:none} .seg.fx button{min-height:36px; padding:0 8px}
+  .drawrow{gap:6px} .drawrow .tools{gap:4px} .stylebtn{font-size:14px; padding:0 10px}
+  .pickrow{gap:8px} .pickcol .swatches{gap:2.5px; flex-wrap:nowrap} .pickcol .sw{width:25px; height:25px; min-height:0}
+  #colors, .swatches.grid9{grid-template-columns:repeat(3, 24px)} #colors .sw, .swatches.grid9 .sw{width:24px; height:24px}
+  #ptShape button{width:30px; min-height:30px}
+}
+@media (max-width:372px){
+  .pickcol .swatches{display:grid; grid-template-columns:repeat(5, 26px); gap:3px} .pickcol .sw{width:26px; height:26px}
+  .swatches.grid9{grid-template-columns:repeat(3, 24px); gap:0}
+  #ptShape button{width:27px}
+}
+@media (min-width:700px) and (min-aspect-ratio:5/4){ .pickcol .swatches{gap:2px} .pickcol .sw{width:27px; height:27px} }
+/* A phone on its side: brushes in two rows beside the colours, so the panel fits the height */
+@media (max-height:460px) and (min-aspect-ratio:5/4){
+  .pickrow{flex-wrap:nowrap} .pickcol .swatches{display:grid; grid-template-columns:repeat(5, 26px); gap:3px} .pickcol .sw{width:26px; height:26px}
+  .panel{width:290px; gap:6px} .drawrow{gap:6px; row-gap:4px} .drawrow .tool{height:38px} .stylebtn{min-height:38px}
+  #ptShape button{width:28px; min-height:28px} .music{width:130px; gap:8px} .music .soundrow{gap:5px} .music .bpm, .music .pick{height:32px}
+}
+@media (max-width:372px){ .prow .kn{width:40px; height:40px} .seg.modes button{width:32px} .icon.round{width:40px; height:40px; min-height:40px} }
+@media (max-height:460px) and (min-aspect-ratio:5/4){ #ptShape button{width:24px} #optGroup .row{gap:5px} #optGroup .kn{width:30px; height:30px} .pickrow{gap:6px} }

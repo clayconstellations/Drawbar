@@ -14,20 +14,19 @@ export const isVisual = () => $('app').classList.contains('visual');
 // Size the stage to exactly the drawing: as big as the space allows, with the knobs and controls kept clear of it
 export function layout() {
   if (page === 'clips') return;
-  const visual = isVisual(), wide = prefs.shape === 'wide';
+  // Fill is for full screen only (v31): in the app the drawing is always a circle, and the corners of its square hold controls
+  const visual = isVisual(), wide = visual && prefs.shape === 'wide';
   let aw, ah;
   if (visual) { aw = innerWidth; ah = innerHeight; }
-  else {
-    const main = $('main'), land = getComputedStyle(main).flexDirection === 'row';
-    if (land) { aw = $('left').clientWidth; ah = main.clientHeight; }
-    else { aw = main.clientWidth; ah = main.clientHeight - $('panel').offsetHeight - 14; }
-  }
+  else { const left = $('left'); aw = left.clientWidth; ah = left.clientHeight; }
   let w, h;
   if (wide) { w = aw; h = ah; }
   else w = h = Math.min(aw, ah);
   w = Math.max(120, Math.floor(w)); h = Math.max(68, Math.floor(h));
   if (forced) [w, h] = forced;
   const st = $('stage'); st.style.width = w + 'px'; st.style.height = h + 'px';
+  // Corner controls: as big as fits between the circle and the corner of its square (0.146 of the width)
+  st.style.setProperty('--corner', Math.round(Math.max(30, Math.min(52, w * 0.142))) + 'px');
   const key = [w, h, wide, visual, window.devicePixelRatio, pixelScale()].join();
   if (key !== lastDims) { lastDims = key; resizeCanvas(w, h, wide); }
   // The largest brush is as big on screen as the size control (a button), whatever the size of the drawing

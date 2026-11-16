@@ -307,8 +307,6 @@ function sortPatch(u, g, slot, inside, tint) {
     const q = hash32(g.seed, x, Math.floor(slot / 8)), r0 = Math.floor(frac(q) * rows.length * 0.55);
     const part = rows.slice(r0).map(y => { const p = (y * W + x) * 4; return [d[p], d[p + 1], d[p + 2], d[p + 3], (d[p] * 0.3 + d[p + 1] * 0.59 + d[p + 2] * 0.11) * d[p + 3]]; }).sort((a, b) => (a[4] - b[4]) * g.dir);
     for (let i = r0; i < rows.length; i++) { const p = (rows[i] * W + x) * 4, v = part[i - r0]; d[p] = v[0]; d[p + 1] = v[1]; d[p + 2] = v[2]; d[p + 3] = v[3]; }
-    // empty pixels carry a faint tint, so the stroke is never invisible
-    for (const y of rows) { const p = (y * W + x) * 4; if (d[p + 3] < 14) { d[p] = tr; d[p + 1] = tg; d[p + 2] = tb; d[p + 3] = 14; } }
   }
   u.x.putImageData(im, 0, 0);
 }
@@ -335,10 +333,7 @@ function drawUnder(X, s, g, S, T, slot, e, c) {
     for (let q = 0; q < 4; q++) { const x = t.a * cx[q] + t.c * cy[q] + t.e, y = t.b * cx[q] + t.d * cy[q] + t.f; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(cvs.width, Math.ceil(x1)); y1 = Math.min(cvs.height, Math.ceil(y1));
     const w = x1 - x0, h = y1 - y0, unit = Math.max(3, g.base * Math.sqrt(Math.abs(t.a * t.d - t.b * t.c)));
-    const trace = () => {   // the stroke's own trace, so it is never invisible
-      X.globalAlpha = 0.03 + 0.04 * Math.min(e, 1); X.fillStyle = c; X.fill(body);
-      X.globalAlpha = 1;
-    };
+    const trace = () => {};   // v31: effect brushes touch strokes only, never the empty canvas (they used to leave a faint trace)
     if (w < 6 || h < 6 || k > 5) { trace(); return; }
     if (M.under === 'sort') {
       // Whole big pixels: every pixel the stroke touches is sorted, so the patch has staircase edges (not the brush's
@@ -445,7 +440,8 @@ export function drawLive(X, s, S, B, now, P) {
     };
   } else {
     if (!owners) claimCells(S, B);
-    const cells = (s._cellsNow || liveCells(s, S, T)).filter(q => owners.get(cellKey(q)) === s.id);
+    // (the mark being drawn is not in the drawing yet, so it owns no cells: it shows all of its own)
+    const cells = s._pv ? liveCells(s, S, T) : (s._cellsNow || liveCells(s, S, T)).filter(q => owners.get(cellKey(q)) === s.id);
     pass = (dx, dy, a, col, op) => { X.globalCompositeOperation = op || 'source-over'; drawCells(X, cells, g, col || c, S, slot, e, dx, dy, a); };
   }
   forCopies(X, () => {
