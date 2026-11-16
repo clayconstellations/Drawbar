@@ -1,5 +1,5 @@
 // Hidden layer: the arranger turns strokes into lanes of note events, drums (Euclidean), loops, drones and modulation slots
-import { toneIdx } from '../styles/index.js';
+import { MATS, toneIdx } from '../styles/index.js';
 import { COPIES, cycleBars, cycleBeats, fs, kCopies, mirrored, patternAmount, rawH, sPhase, strokePhase, tileGeo } from '../canvas/index.js';
 import { TAU, clamp, hashFrac, mod, th } from '../core/math.js';
 import { score } from '../core/state.js';
@@ -49,7 +49,8 @@ export function select(cands, budget, steps, poly, clocked, swing) {
 export function arrange() {
   // Strokes hidden under newer ones are out of the music too
   const zoom = fs();   // Size: what you hear is read from the drawing as it appears
-  const S = score.strokes.filter(s => !HIDDEN.has(s)), n = S.length, kale = score.mode === 'kaleido', clocked = score.timing === 'clocked';
+  const S = score.strokes.filter(s => !HIDDEN.has(s) && !MATS[s.color].under),   // effect strokes (Glitch) change the picture only
+  n = S.length, kale = score.mode === 'kaleido', clocked = score.timing === 'clocked';
   let hmin = 1, hmax = 0;
   for (const s of S) for (let i = 0; i < s.pts.length; i += 3) { const h = rawH(s.pts[i][0], s.pts[i][1]); hmin = Math.min(hmin, h); hmax = Math.max(hmax, h); }
   const hspan = Math.max(hmax - hmin, 0.2);

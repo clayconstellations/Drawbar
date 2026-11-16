@@ -267,7 +267,7 @@ export function drawSpaceBg(ctx, W, H) {
   const k = Math.max(W, H);
   ctx.drawImage(bg, (W - k) / 2, (H - k) / 2, k, k);
 }
-// Film grain over the whole view (Space), with a little warmth and falloff toward the edge. One pattern fill per
+// Film grain over the whole view (Space). One pattern fill per
 // frame. The grain holds still and there are no scratches or specks (v30: both removed at the owner's request).
 let grain = null;
 export function drawFilm(ctx, W, H, now, still) {
@@ -281,9 +281,6 @@ export function drawFilm(ctx, W, H, now, still) {
   pat.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0]));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
-  // a little warmth and falloff toward the edge, like an old print
-  const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.56);
-  v.addColorStop(0, 'rgba(255,214,170,0.035)'); v.addColorStop(1, 'rgba(0,0,0,0.3)');
-  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+  // (No shading toward the edge: v30's blended through a warm grey on its way to black, which showed as a bright ring.)
   ctx.restore();
 }

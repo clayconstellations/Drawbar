@@ -64,7 +64,7 @@ button:disabled{opacity:.35; cursor:default}
   -webkit-user-select:text; user-select:text;
 }
 #mapInput:focus{outline:2px solid var(--ink); outline-offset:1px}
-#mapInput.flip{color:var(--ink)}
+/* (the map number keeps its colour while the dice count through numbers) */
 #dice.roll svg{animation:roll .5s ease-out}
 @keyframes roll{from{transform:rotate(-200deg) scale(.8)}to{transform:none}}
 #clipBtn.saved{border-color:var(--ink); color:var(--ink)}
