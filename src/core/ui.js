@@ -18,6 +18,19 @@ import { switchWorld } from './settings.js';
 import { TABS, WORLDS, world } from '../worlds/index.js';
 
 export const mapInput = $('mapInput');
+// The chip in the top bar: map number and tempo, always in view. Tapping it opens the song sheet (map and dice,
+// tempo, loop timing, key, scale): things decided early and revisited now and then.
+export const syncChip = () => { $('chipMap').textContent = mapInput.value || String(score.map).padStart(3, '0'); $('chipBpm').textContent = score.tempo; };
+export const openSong = open => { $('songSheet').hidden = !open; $('songBtn').setAttribute('aria-expanded', String(open)); };
+// Draw / Play (a phone shows one at a time; a wide screen shows both and ignores this)
+export function setTab(tab) { ui.tab = tab; const a = $('app'); a.classList.toggle('tab-play', tab === 'play'); a.classList.toggle('tab-draw', tab !== 'play'); for (const b of $('tabSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === tab)); requestAnimationFrame(layout); }
+// The four sound knobs sit in the drawing's corners on a phone (Play tab), and in their own column on a wide screen
+const wideMq = window.matchMedia('(min-width:700px) and (min-aspect-ratio:5/4)');
+export function placeKnobs() {
+  const ks = ['knDensity', 'knProb', 'knSpace', 'knTone'].map(id => $(id).parentElement), wide = wideMq.matches;
+  ks.forEach((k, i) => { const home = wide ? $('knobRow') : $('kc' + i); if (k.parentElement !== home) home.appendChild(k); });
+  $('app').classList.toggle('wide', wide);
+}
 let lastTool = 'glow';
 export const change = fn => { checkpoint(); fn(); rebuild(); syncUI(); };
 // Preferences
@@ -66,7 +79,9 @@ export function syncUI() {
   for (const i of w.matIdx) if (MATS[i].under) $('sw-' + i).disabled = noBase;
   // Brush options: the shape choices and Variety knob of the brush in hand
   { const kind = ui.tool === 'erase' ? null : optKind(MATS[ui.color]), O = kind && OPTS[kind], o = optsFor(kind), seg = $('ptShape');
-    $('optGroup').hidden = !kind;
+    // In a style with brush options (Glitch) the row keeps its place even when the brush in hand has none,
+    // so the brushes above it never move
+    $('optGroup').hidden = !(w.options && w.options.fx); $('optGroup').classList.toggle('empty', !kind);
     if (kind) {
       if (seg.dataset.kind !== kind) { seg.dataset.kind = kind; seg.innerHTML = (O.shapes || []).map(([v, name, svg]) => `<button data-v="${v}" aria-label="${name}" title="${name}">${svg}</button>`).join(''); seg.hidden = !O.shapes; $('ptVaryL').textContent = O.vary; $('ptVary').setAttribute('aria-label', O.vary); $('optTitle').textContent = O.title; }
       for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === o.shape));
@@ -84,7 +99,6 @@ export function syncUI() {
   $('pixBtn').hidden = !(w.options && w.options.pixel); $('pixBtn').setAttribute('aria-pressed', String(!!score.pixel));
   $('pk2w').hidden = free && !L.rotate;
   for (const md of MODES) $('mode-' + md.id).setAttribute('aria-pressed', String(m === md.id));
-  $('modeName').textContent = MODES.find(md => md.id === m).name;
   for (const v of ['tones', 'both', 'drums']) $('inst-' + v).setAttribute('aria-pressed', String(score.inst === v));
   $('timeC').setAttribute('aria-pressed', String(score.timing === 'clocked'));
   $('timeH').setAttribute('aria-pressed', String(score.timing === 'hand'));
@@ -112,7 +126,7 @@ export function syncUI() {
   // The accent follows the colour in hand, unless that is too dark to see on the dark panel
   document.documentElement.style.setProperty('--ink', accent());
   if (!anim) mapInput.value = String(score.map).padStart(3, '0');
-  $('bpmVal').textContent = score.tempo;
+  $('bpmVal').textContent = score.tempo; syncChip();
   $('undoBtn').disabled = !undoStack.length;
   $('redoBtn').disabled = !redoStack.length;
   $('clearBtn').disabled = !score.strokes.length;
@@ -214,10 +228,14 @@ export function initControls() {
   mapInput.addEventListener('keydown', e => { if (e.key === 'Enter') { const v = mapInput.value.replace(/\D/g, ''); if (v) setMap(+v); mapInput.blur(); } });
   mapInput.addEventListener('blur', () => { if (!anim) mapInput.value = String(score.map).padStart(3, '0'); });
 
+  $('songBtn').addEventListener('click', () => openSong($('songSheet').hidden));
+  document.addEventListener('pointerdown', e => { if (!$('songSheet').hidden && !$('songSheet').contains(e.target) && !e.target.closest('#songBtn')) openSong(false); });
+  $('tabSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v) setTab(v); });
+  setTab('draw'); placeKnobs(); wideMq.addEventListener('change', () => { placeKnobs(); requestAnimationFrame(layout); });
   for (const b of document.querySelectorAll('.cogbtn')) b.addEventListener('click', () => openSettings(settings.hidden));
   $('closeSettings').addEventListener('click', () => openSettings(false));
   document.addEventListener('pointerdown', e => { if (!settings.hidden && !settings.contains(e.target) && !e.target.closest('.cogbtn')) openSettings(false); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { openSettings(false); openStyles(false); $('exportDlg').hidden = true; setVisual(false); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { openSettings(false); openSong(false); openStyles(false); $('exportDlg').hidden = true; setVisual(false); } });
   // Light mode turns every colour in the app over (dark to light, hues kept). Picture only: the sound never changes.
   applyLight();
   for (const [id, k] of [['prTempo', 'rTempo'], ['prMode', 'rMode'], ['prFolds', 'rFolds'], ['prSmooth', 'smooth'], ['prLight', 'light']]) {

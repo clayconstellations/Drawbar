@@ -7,7 +7,7 @@ import { clamp, ease } from './math.js';
 import { SET_KEYS, checkpoint, mix, prefs, redoStack, savePrefs, score, seeId, snap, ui, undoStack } from './state.js';
 import { prepare } from './stroke.js';
 import { setBpm } from './transport.js';
-import { mapInput, syncUI } from './ui.js';
+import { mapInput, syncChip, syncUI } from './ui.js';
 import { appendStroke, checkHiddenSoon, ensureCanvases, fb, markGroupsDirty, refreshHidden, releaseCanvases, syncDraw } from '../render/compose.js';
 import { ARR, rearrange } from '../sound/arranger.js';
 import { applyAudio, applyTempoParams } from '../sound/graph.js';
@@ -78,7 +78,7 @@ export function randomize() {
 export function stepRandomize(now) {
   const a = anim, p = clamp((now - a.t0) / a.dur, 0, 1), e = ease(p);
   // Count through the numbers like a flip clock, and glide the tempo
-  mapInput.value = String(Math.round(a.fromMap + (a.target.map - a.fromMap) * e)).padStart(3, '0');
+  mapInput.value = String(Math.round(a.fromMap + (a.target.map - a.fromMap) * e)).padStart(3, '0'); syncChip();
   setTempo(a.fromTempo + (a.target.tempo - a.fromTempo) * e, true);
   if (!a.swapped && p >= 0.5) {
     a.swapped = true;
@@ -98,7 +98,7 @@ export function setMap(n) {
 }
 export function setTempo(v, silent) {
   v = clamp(Math.round(v), 40, 180);
-  $('bpmVal').textContent = v; $('bpm').setAttribute('aria-valuenow', v);
+  $('bpmVal').textContent = v; $('bpm').setAttribute('aria-valuenow', v); syncChip();
   if (v === score.tempo) return;
   score.tempo = v; setBpm(v);
   if (ARR) applyTempoParams(silent ? 0.1 : 0.25);

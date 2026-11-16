@@ -373,3 +373,71 @@ html.light{filter:invert(1) hue-rotate(180deg)}
 }
 @media (max-width:372px){ .prow .kn{width:40px; height:40px} .seg.modes button{width:32px} .icon.round{width:40px; height:40px; min-height:40px} }
 @media (max-height:460px) and (min-aspect-ratio:5/4){ #ptShape button{width:24px} #optGroup .row{gap:5px} #optGroup .kn{width:30px; height:30px} .pickrow{gap:6px} }
+
+/* ===== v33: grouped by when things are used. Draw | Play tabs on a phone; both shown on a wide screen. ===== */
+/* Top bar: the song chip (map and tempo; opens the song sheet), then undo, redo, clips, play, preferences */
+.songchip{display:flex; align-items:center; gap:7px; height:38px; padding:0 10px; border-radius:10px; font-family:var(--mono); font-size:17px; letter-spacing:.06em}
+.songchip i{width:1px; height:18px; background:var(--line)}
+.songchip small{font-size:9px; color:var(--muted); letter-spacing:.1em; margin-left:-3px}
+.songchip[aria-expanded="true"]{border-color:var(--ink)}
+.songsheet{left:max(16px, env(safe-area-inset-left, 0px)); right:auto; width:min(300px, calc(100vw - 32px)); gap:10px}
+.songsheet .srow{display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:600}
+.songsheet .pick{max-width:170px}
+@media (min-width:700px){ .songsheet{left:auto; right:max(16px, env(safe-area-inset-right, 0px))} }
+/* Tabs */
+.toprow{display:flex; align-items:center; justify-content:center; gap:10px; width:100%}
+.tabseg button{min-height:34px; padding:0 14px; font-size:13px; font-weight:700}
+.app.tab-draw:not(.wide) .playonly, .app.tab-play:not(.wide) .drawonly{display:none}
+.app.wide .tabseg{display:none}
+/* Corners: size and eraser while drawing; the four sound knobs while playing (phone). Hidden ones keep their size. */
+.app.tab-draw:not(.wide) .playc, .app.tab-play:not(.wide) .drawc, .app.wide .playc{visibility:hidden; pointer-events:none}
+.corner.playc{border-radius:0; display:block}
+.corner.playc .kwrap.big{width:100%; height:100%; gap:0; justify-content:center}
+.corner.playc .kn.big{width:calc(var(--corner, 44px) - 12px); height:calc(var(--corner, 44px) - 12px)}
+.corner.playc .kn.big .kv{font-size:11px}
+.corner.playc .kl{font-size:8.5px; line-height:1; letter-spacing:0; white-space:nowrap}
+.music{display:none}
+.app.wide .music{display:flex; width:76px; flex-direction:column; gap:10px}
+.app.wide .music .knobs.sound{display:flex; flex-direction:column; gap:12px}
+.app.wide .panel{width:310px}
+.app.wide .toprow{justify-content:space-between}
+/* Brushes: one box, cells touching, the one in hand lit (like the toggles) */
+.pickcol{width:100%; align-items:center; gap:8px}
+#matGroup{max-width:100%}
+#swatches:not(.grid9){display:flex; flex-wrap:nowrap; gap:0; background:var(--raise); border:1px solid var(--line); border-radius:9px; padding:3px; max-width:100%}
+#swatches:not(.grid9) .sw{width:33px; height:33px; min-height:0; flex:0 0 33px; border:0; border-radius:6px; aspect-ratio:auto}
+#swatches:not(.grid9) .sw::after{inset:4px; border-radius:50%; background:var(--c); background-color:transparent}
+#swatches:not(.grid9) .sw.fxsw::after{border-radius:3px}
+#swatches:not(.grid9) .sw[aria-pressed="true"]{background:var(--fg); border-color:transparent}
+#swatches:not(.grid9) .sw.fxfirst::before{left:-1px}
+/* Colours: one row of touching square cells */
+#colors, .swatches.grid9{display:grid; grid-template-columns:repeat(9, 32px); gap:0; border:1px solid #3a4160; border-radius:0; background:#3a4160}
+#colors .sw, .swatches.grid9 .sw{width:32px; height:28px; border-radius:0}
+#colors .sw::after, .swatches.grid9 .sw::after{border-radius:0 !important}
+/* Brush options (Glitch): the row keeps its place even when the brush in hand has none */
+#optGroup{min-height:40px; justify-content:center}
+#optGroup.empty .row{visibility:hidden}
+#optGroup .kn{width:36px; height:36px}
+#ptShape button{width:34px; min-height:32px}
+@media (max-width:440px){
+  #swatches:not(.grid9) .sw{width:33px; height:33px; flex:0 0 33px}
+  #colors, .swatches.grid9{grid-template-columns:repeat(9, minmax(0, 34px))} #colors .sw, .swatches.grid9 .sw{width:auto; height:28px}
+  .top{flex-wrap:nowrap; gap:6px} .top .cluster{flex-wrap:nowrap; gap:5px; margin-left:auto} .top .icon{width:34px; min-height:36px}
+  .songchip{font-size:15px; padding:0 8px; gap:6px; height:36px}
+}
+@media (max-width:372px){
+  .songchip{font-size:15px; padding:0 7px; gap:5px; height:36px} .tabseg button{padding:0 10px}
+  #swatches:not(.grid9){display:flex} #swatches:not(.grid9) .sw{width:30px; height:30px; flex-basis:30px}
+  .top .icon{width:31px} .top .cluster{gap:4px} .songchip{padding:0 6px; gap:4px; font-size:14px}
+  #ptShape button{width:30px}
+}
+@media (min-width:700px) and (min-aspect-ratio:5/4){
+  #swatches:not(.grid9) .sw{width:29px; height:29px; flex-basis:29px}
+  #colors, .swatches.grid9{grid-template-columns:repeat(9, 32px)}
+}
+@media (max-height:460px) and (min-aspect-ratio:5/4){
+  #swatches:not(.grid9){display:flex} #swatches:not(.grid9) .sw{width:27px; height:27px; flex-basis:27px}
+  #colors, .swatches.grid9{grid-template-columns:repeat(9, 28px)} #colors .sw, .swatches.grid9 .sw{width:28px; height:22px}
+  .app.wide .panel{width:290px} #optGroup{min-height:32px} .tabseg button{min-height:28px} .pickcol{gap:5px}
+}
+.corner.playc svg{width:100%; height:100%}

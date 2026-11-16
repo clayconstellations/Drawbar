@@ -2,7 +2,7 @@
 export const score = { mode: 'kaleido', copies: 4, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, timing: 'clocked', inst: 'both', world: 'classic', pixel: false, fx: 'smear', map: 417, tempo: 92, key: 2, scale: 2, strokes: [] };
 export const MIX_DEF = { density: 1, prob: 1, space: 0.5, tone: 0.7 };
 export const mix = { ...MIX_DEF };
-export const ui = { tool: 'glow', color: 1, brushV: 50, eraseV: 45, tint: '#ee3b3f', opts: {} };   // opts: brush options in hand, per kind of brush (brushopts.js)
+export const ui = { tool: 'glow', color: 1, brushV: 50, eraseV: 45, tint: '#ee3b3f', opts: {}, tab: 'draw' };   // opts: brush options in hand, per kind of brush (brushopts.js)
 export const prefs = { rTempo: true, rMode: false, rFolds: true, glide: 1200, shape: 'circle', volTones: 80, volDrums: 80, world: 'paint', smooth: true, light: false };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('visual-score-prefs') || '{}')); } catch (e) {}
 export const savePrefs = () => { try { localStorage.setItem('visual-score-prefs', JSON.stringify(prefs)); } catch (e) {} };
