@@ -11,6 +11,6 @@ export default {
   tools: ['glow', 'erase'],
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 30, copies: 6, tiles: 4, turns: 3, rotate: true },
-  start: { mode: 'kaleido', copies: 6, spiral: 0, tiles: 4, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Comic red' },
+  start: { mode: 'free', copies: 6, spiral: 0, tiles: 4, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Comic red' },
   render: { fixedLight: true, sprites: true },
 };

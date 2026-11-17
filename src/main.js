@@ -8,6 +8,7 @@ import { initClips } from './core/clips.js';
 import { initExport } from './core/export.js';
 import { initControls, applyView, syncUI } from './core/ui.js';
 import { layout } from './core/layout.js';
+import { initMod } from './core/modui.js';
 import { playing, lastEnd, setLastEnd, sessionNow } from './core/transport.js';
 import { rearrange } from './sound/arranger.js';
 import { applySettings, switchWorld } from './core/settings.js';
@@ -22,12 +23,13 @@ initSizeBar();
 initClips();
 initExport();
 initControls();
+initMod();
 
 rearrange();
 {
   let pend = 0;
   const ro = new ResizeObserver(() => { if (!pend) pend = requestAnimationFrame(() => { pend = 0; layout(); }); });
-  for (const id of ['main', 'panel', 'musicPane', 'left']) ro.observe($(id));
+  for (const id of ['app', 'topArea', 'drawPane', 'playPane']) ro.observe($(id));
 }
 // Reopen the style tab used last time
 // (once, the first time v27 runs, everyone starts in Paint, the new default)

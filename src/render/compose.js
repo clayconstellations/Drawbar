@@ -6,6 +6,8 @@ import { cur, eraseAt, erasing, unrot } from '../core/input.js';
 import { relayout } from '../core/layout.js';
 import { SQ3, TAU, clamp, mod } from '../core/math.js';
 import { anim, hiddenChanged, rebuild, stepRandomize } from '../core/settings.js';
+import { modTick } from '../core/mod.js';
+import { applySpace, applyTone } from '../sound/graph.js';
 import { score } from '../core/state.js';
 import { BEAD_R, NEON_W, prepare } from '../core/stroke.js';
 import { drawUpright } from './space.js';
@@ -464,6 +466,7 @@ export function frame(now) {
   watchFrameRate(now);
   if (anim) stepRandomize(now);
   if (erasing) { erasing.p = unrot(erasing.screen); eraseAt(erasing.p); }
+  { const S0 = visNow(), mc = modTick(beatAt(S0), S0); if (mc.space) applySpace(); if (mc.tone) applyTone(); if (mc.pattern) { groupsDirty = true; needsRebuild = true; } }
   if (needsRebuild && now - lastRebuildT > 120) { needsRebuild = false; lastRebuildT = now; rebuild(undefined, true); }
   ensureCanvases();
   const S = visNow(), B = beatAt(S), rot = rotAt(B), W = geo.W, H = geo.H, cd = cellDims();

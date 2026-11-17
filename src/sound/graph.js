@@ -1,7 +1,7 @@
 // Audio graph: master bus, compressor, reverb, delay, granular, shimmer, smear, spectral thinning, wobble, tremolo,
 // per-family tone chains, N.wet (Space), N.toneVol / N.drumVol (Level knobs)
 import { TAU, clamp, mtof, mulberry32 } from '../core/math.js';
-import { mix, prefs, score } from '../core/state.js';
+import { live, prefs, score } from '../core/state.js';
 import { audioReady } from '../core/transport.js';
 import { ARR } from './arranger.js';
 import { syncDrones } from './drones.js';
@@ -156,25 +156,25 @@ export function applyTone(tc) {
   if (!audioReady) return;
   const t = actx.currentTime;
   for (const f of FAMS) {
-    const pr = MAP.tone[f], tt = Math.pow(mix.tone, pr.e), ch = N.fam[f], k = tc ?? pr.tc;
+    const pr = MAP.tone[f], tt = Math.pow(live.tone, pr.e), ch = N.fam[f], k = tc ?? pr.tc;
     ch.lp.frequency.setTargetAtTime(pr.m === 'lp' ? 450 * Math.pow(40, tt) : 18000, t, k);
     ch.lp.Q.setTargetAtTime(pr.m === 'lp' ? pr.q : 0.7, t, k);
     ch.hs.frequency.setTargetAtTime(pr.hz, t, k);
     ch.hs.gain.setTargetAtTime(pr.m === 'shelf' ? -30 * (1 - tt) : 0, t, k);
   }
 }
-export const toneEnv = f => { const pr = MAP.tone[f]; return pr && pr.m === 'env' ? pr.floor + (1 - pr.floor) * Math.pow(mix.tone, pr.e) : 1; };
+export const toneEnv = f => { const pr = MAP.tone[f]; return pr && pr.m === 'env' ? pr.floor + (1 - pr.floor) * Math.pow(live.tone, pr.e) : 1; };
 // Space sets how loud the effects are and, a little, how deep they go: longer echoes, a fuller shimmer, a brighter smear
-export const spaceAmt = () => 0.55 + 0.9 * mix.space;
+export const spaceAmt = () => 0.55 + 0.9 * live.space;
 export const volGain = v => Math.pow(v / 80, 2);
 export function applyVolumes() { if (!audioReady) return; const t = actx.currentTime; N.toneVol.gain.setTargetAtTime(volGain(prefs.volTones), t, 0.03); N.drumVol.gain.setTargetAtTime(volGain(prefs.volDrums), t, 0.03); }
 export function applySpace() {
   if (!audioReady) return;
   const t = actx.currentTime, f = spaceAmt();
-  N.wet.gain.setTargetAtTime(Math.pow(mix.space * 2, 1.2), t, 0.015);
+  N.wet.gain.setTargetAtTime(Math.pow(live.space * 2, 1.2), t, 0.015);
   N.dlyFb.gain.setTargetAtTime(Math.min(N.dFbBase * f, 0.8), t, 0.05);
-  N.shimFb.gain.setTargetAtTime(0.16 + 0.42 * mix.space, t, 0.05);
-  N.smearLP.frequency.setTargetAtTime(2400 + 4200 * mix.space, t, 0.05);
+  N.shimFb.gain.setTargetAtTime(0.16 + 0.42 * live.space, t, 0.05);
+  N.smearLP.frequency.setTargetAtTime(2400 + 4200 * live.space, t, 0.05);
 }
 export function applyAudio(tc = 0.25) {
   if (!audioReady || !ARR) return;

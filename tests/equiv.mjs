@@ -49,7 +49,7 @@ async function run(url, size) {
         G.score.strokes = strokes.map(s => { s = { ...s, pts: s.pts.map(p => p.slice()) }; G.prepare(s); return s; });
         G.applySettings({ ...G.score, fscale: 50, ...st, map, key: 2, scale: 2, tempo: 92, timing: 'clocked', inst: 'both' });
         const A = G.arrange();
-        const ser = JSON.stringify(A, (k, v) => k === 's' ? (v && v.id) : typeof v === 'function' ? 'fn' : v);
+        const ser = JSON.stringify(A, (k, v) => k === 'sx' || k === 'sy' ? undefined : k === 's' ? (v && v.id) : typeof v === 'function' ? 'fn' : v);
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
         await new Promise(r => setTimeout(r, 150));
         const cv = document.getElementById('cv');

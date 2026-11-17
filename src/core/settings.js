@@ -4,7 +4,7 @@ import { COPIES, TURNS } from '../canvas/index.js';
 import { endPreview, preview } from './clips.js';
 import { $ } from './dom.js';
 import { clamp, ease } from './math.js';
-import { SET_KEYS, checkpoint, mix, prefs, redoStack, savePrefs, score, seeId, snap, ui, undoStack } from './state.js';
+import { SET_KEYS, checkpoint, mix, modBase, prefs, redoStack, savePrefs, score, seeId, snap, ui, undoStack } from './state.js';
 import { prepare } from './stroke.js';
 import { setBpm } from './transport.js';
 import { mapInput, syncChip, syncUI } from './ui.js';
@@ -32,7 +32,10 @@ export function strokeAdded(s) {
 export function hiddenChanged() { rearrange(); applyAudio(); }
 export function applySettings(st, tc) {
   if (st.map !== score.map || MAP.n !== st.map) { score.map = st.map; useMap(st.map); }
-  for (const k of SET_KEYS) if (k !== 'map' && k !== 'tempo' && st[k] !== undefined) score[k] = st[k];
+  for (const k of SET_KEYS) if (k !== 'map' && k !== 'tempo' && k !== 'mods' && st[k] !== undefined) score[k] = st[k];
+  // Modulators come as a copy (undo and clips must not share them); the settings above are the knobs' own values
+  if (st.mods !== undefined) score.mods = JSON.parse(JSON.stringify(st.mods || {}));
+  for (const k in modBase) delete modBase[k];
   // Clips from before Lattice and Tessellation became Tiles
   if (score.mode === 'lattice') { score.mode = 'tiles'; score.turns = score.mirror ? 1 : 0; }
   else if (score.mode === 'tess') { score.mode = 'tiles'; score.turns = 4; }
@@ -46,7 +49,7 @@ export function applySettings(st, tc) {
 export function restore(o) {
   score.strokes = o.strokes.map(x => { const s = { ...x, pts: x.pts.map(p => p.slice()) }; prepare(s); return s; });
   for (const s of score.strokes) seeId(s.id);
-  applySettings(o.set);
+  applySettings({ ...o.set, mods: o.set.mods || {} });
 }
 export let anim = null;
 export function randomize() {
@@ -70,6 +73,7 @@ export function randomize() {
   const d = $('dice'); d.classList.remove('roll'); void d.offsetWidth; d.classList.add('roll');
   // The pattern itself changes straight away; the sound glides into the new map
   Object.assign(score, { mode: target.mode, copies: target.copies, spiral: target.spiral, tiles: target.tiles, turns: target.turns, mirror: target.mirror, frot: target.frot, fmirror: target.fmirror });
+  for (const k in modBase) modBase[k] = score[k];   // a modulated knob's own value is what was randomized
   if (prefs.glide <= 0) { applySettings(target); return; }
   rebuild(); syncUI();
   anim = { t0: performance.now(), dur: prefs.glide, fromMap: score.map, fromTempo: score.tempo, target, swapped: false };

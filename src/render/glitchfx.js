@@ -157,7 +157,7 @@ function drawCells(X, cells, g, color, S, slot, e, dx, dy, alpha) {
   for (const [x0, y0, gi, lv, hd] of cells) {
     // Characters are replaced over time: some cells never change, some tick slowly, some flicker
     const h = hash32(Math.round(x0 * 1000), Math.round(y0 * 1000), 5150), pace = h % 10, rate = pace < 3 ? 0 : pace < 8 ? 0.6 + frac(h >>> 5) * 2.4 : 6 + frac(h >>> 5) * 9;
-    const ch = (gi + Math.floor(S * rate + (h >>> 12) % 7)) % NGLYPH;
+    const idx = gi + Math.floor(S * rate * (g.churn == null ? 1 : g.churn) + (h >>> 12) % 7), ch = g.cs ? g.cs[0] + idx % g.cs[1] : idx % NGLYPH;
     let x = x0 + dx, y = y0 + dy, k = G;
     if (g.fx === 'jitter') {
       const j = hash32(h, Math.floor(slot / (1 + pace % 4))), big = j % 7 === 0, a = g.amt * (1 + e);
@@ -277,12 +277,16 @@ const LIVE = {
       const u = L[i], h = 0.55 * Math.sin(u / lam - S * 1.3 * g.rate + v * 1.7 + g.seed % 5) + 0.9 * vary * Math.sin(u / (lam * 0.41) + S * 0.8 - v * 2.9) + Math.max(0, vary - 0.5) * 0.9 * Math.sin(u / (lam * 0.17) - S * 1.9 + v * 4.1);
       return [px[i] + s._nx[i] * v * w[i] * 1.5, py[i] + s._ny[i] * v * w[i] * 1.5 - h * w[i] * 0.75 * amp];
     };
-    const last = m - 1;
-    for (let k = 0; k < K; k++) {
-      const v = k / (K - 1) * 2 - 1;
-      for (let i = g.m0; ; i += step) { const j = Math.min(i, last), q = at(j, v); if (i > g.m0) P.lineTo(q[0], q[1]); else P.moveTo(q[0], q[1]); if (j === last) break; }
+    const last = m - 1, mesh = (s.pt && s.pt.shape) || 'grid', KK = mesh === 'contour' ? 8 : K;
+    // Options: the mesh. Grid: lines along and across. Ridges: lines along only. Triangles: a zigzag between the
+    // lines as well. Contour lines: more lines along, each stepping between levels.
+    const at2 = mesh === 'contour' ? (i, v) => { const q = at(i, v), flat = at(i, v)[1]; return [q[0], py[i] + s._ny[i] * v * w[i] * 1.5 + Math.round((flat - (py[i] + s._ny[i] * v * w[i] * 1.5)) / (w[i] * 0.3)) * w[i] * 0.3]; } : at;
+    for (let k = 0; k < KK; k++) {
+      const v = k / (KK - 1) * 2 - 1;
+      for (let i = g.m0; ; i += step) { const j = Math.min(i, last), q = at2(j, v); if (i > g.m0) P.lineTo(q[0], q[1]); else P.moveTo(q[0], q[1]); if (j === last) break; }
     }
-    for (let i = g.m0; ; i += step * 2) { const j = Math.min(i, last); for (let k = 0; k < K; k++) { const q = at(j, k / (K - 1) * 2 - 1); if (k) P.lineTo(q[0], q[1]); else P.moveTo(q[0], q[1]); } if (j === last) break; }
+    if (mesh === 'grid' || mesh === 'tri') for (let i = g.m0; ; i += step * 2) { const j = Math.min(i, last); for (let k = 0; k < K; k++) { const q = at(j, k / (K - 1) * 2 - 1); if (k) P.lineTo(q[0], q[1]); else P.moveTo(q[0], q[1]); } if (j === last) break; }
+    if (mesh === 'tri') for (let k = 0; k < K - 1; k++) for (let i = g.m0, z = 0; ; i += step * 2, z++) { const j = Math.min(i, last), q = at(j, (k + (z % 2)) / (K - 1) * 2 - 1); if (z) P.lineTo(q[0], q[1]); else P.moveTo(q[0], q[1]); if (j === last) break; }
     return { line: P };
   },
 };
@@ -297,21 +301,25 @@ const LIVE = {
 // about, which showed almost nothing over thin lines.)
 const spare = document.createElement('canvas'), spx = spare.getContext('2d');
 const FLIPC = ['#00e5ff', '#ff2bd6', '#fff35c', '#ffffff'];
-function sortPatch(u, g, slot, inside, tint) {
-  const W = u.c.width, H = u.c.height, im = u.x.getImageData(0, 0, W, H), d = im.data, [tr, tg, tb] = toRgb(tint);
-  for (let x = 0; x < W; x++) {
-    // this column's touched pixels, top to bottom; sorted by brightness from a point part-way down
-    const rows = [];
-    for (let y = 0; y < H; y++) { const p = (y * W + x) * 4; if (inside[y * W + x]) rows.push(y); else d[p + 3] = 0; }
-    if (!rows.length) continue;
-    const q = hash32(g.seed, x, Math.floor(slot / 8)), r0 = Math.floor(frac(q) * rows.length * 0.55);
-    const part = rows.slice(r0).map(y => { const p = (y * W + x) * 4; return [d[p], d[p + 1], d[p + 2], d[p + 3], (d[p] * 0.3 + d[p + 1] * 0.59 + d[p + 2] * 0.11) * d[p + 3]]; }).sort((a, b) => (a[4] - b[4]) * g.dir);
-    for (let i = r0; i < rows.length; i++) { const p = (rows[i] * W + x) * 4, v = part[i - r0]; d[p] = v[0]; d[p + 1] = v[1]; d[p + 2] = v[2]; d[p + 3] = v[3]; }
+// dir: which way the sorted pixels run (down, up, left, right). thr: how much of each line is sorted (null: as before)
+function sortPatch(u, g, slot, inside, dir, thr) {
+  const W = u.c.width, H = u.c.height, im = u.x.getImageData(0, 0, W, H), d = im.data;
+  const horiz = dir === 'left' || dir === 'right', rev = dir === 'up' || dir === 'left', A = horiz ? H : W, Bn = horiz ? W : H;
+  for (let i = 0; i < W * H; i++) if (!inside[i]) d[i * 4 + 3] = 0;
+  for (let a = 0; a < A; a++) {
+    // this line's touched pixels, in the direction of the sort; sorted by brightness from a point part-way along
+    const cells = [];
+    for (let b = 0; b < Bn; b++) { const i = horiz ? a * W + b : b * W + a; if (inside[i]) cells.push(i); }
+    if (!cells.length) continue;
+    if (rev) cells.reverse();
+    const q = hash32(g.seed, a, Math.floor(slot / 8)), r0 = Math.floor(cells.length * (thr == null ? 0.55 * frac(q) : (1 - thr) * (0.45 + 0.55 * frac(q))));
+    const part = cells.slice(r0).map(i => { const p = i * 4; return [d[p], d[p + 1], d[p + 2], d[p + 3], (d[p] * 0.3 + d[p + 1] * 0.59 + d[p + 2] * 0.11) * d[p + 3]]; }).sort((x, y) => (x[4] - y[4]) * g.dir);
+    for (let k = r0; k < cells.length; k++) { const p = cells[k] * 4, v = part[k - r0]; d[p] = v[0]; d[p + 1] = v[1]; d[p + 2] = v[2]; d[p + 3] = v[3]; }
   }
   u.x.putImageData(im, 0, 0);
 }
 function drawUnder(X, s, g, S, T, slot, e, c) {
-  const M = MATS[s.color], n = s.pts.length;
+  const M = MATS[s.color], n = s.pts.length, has = !!s.pt, [oShape, oVary] = optOf(s, '', 0.5);   // the stroke's own options
   // The patch worked on is three times the brush's width (a brush-wide strip showed too little of the picture)
   const wide = g.wide || (g.wide = s._w.map(v => v * 3));
   let body = s.tool === 'glow' ? g.body || (g.body = buildShape(capsAlong(s._xs, s._ys, wide, 0, n - 1, 3), [], [1], g.base, 0).paths[1]) : null;
@@ -352,7 +360,7 @@ function drawUnder(X, s, g, S, T, slot, e, c) {
         u.runs = [];
         for (let y = 0; y < H; y++) for (let x = 0, a = -1; x <= W; x++) { const on = x < W && mk[(y * W + x) * 4 + 3] > 90; if (on) { inside[y * W + x] = 1; if (a < 0) a = x; } else if (a >= 0) { u.runs.push(a, y, x - a); a = -1; } }
         u.x.clearRect(0, 0, W, H); u.x.drawImage(cvs, x0, y0, W * px, H * px, 0, 0, W, H);
-        sortPatch(u, g, slot, inside, c);
+        sortPatch(u, g, slot, inside, has ? oShape : 'down', has ? oVary : null);
       }
       X.save(); X.setTransform(1, 0, 0, 1, 0, 0);
       for (let q = 0; q < u.runs.length; q += 3) X.clearRect(x0 + u.runs[q] * px, y0 + u.runs[q + 1] * px, u.runs[q + 2] * px, px);
@@ -363,28 +371,32 @@ function drawUnder(X, s, g, S, T, slot, e, c) {
     X.save(); X.clip(body); X.setTransform(1, 0, 0, 1, 0, 0);
     if (false) {
     } else if (M.under === 'mosh') {
-      const sc = Math.min(1, 520 / Math.max(w, h)), W = Math.max(4, Math.round(w * sc)), H = Math.max(4, Math.round(h * sc)), every = 7 + g.hold;
+      const sc = Math.min(1, 520 / Math.max(w, h)), W = Math.max(4, Math.round(w * sc)), H = Math.max(4, Math.round(h * sc)), every = has ? Math.max(2, Math.round((3 + g.hold) * (0.4 + 2.4 * oVary))) : 7 + g.hold;
       let u = un[k];
       if (!u || u.c.width !== W || u.c.height !== H) { const cc = document.createElement('canvas'); cc.width = W; cc.height = H; u = un[k] = { c: cc, x: cc.getContext('2d'), at: -99, n: 0 }; }
       if (slot - u.at >= every) { u.at = slot; u.n++; u.x.clearRect(0, 0, W, H); u.x.drawImage(cvs, x0, y0, w, h, 0, 0, W, H); }
       const age = Math.min(1, (slot - u.at + 1) / every), bs = Math.max(8, Math.round(Math.max(unit * 0.7, Math.sqrt(w * h / 160))));
-      for (let by = 0, j = 0; by < h; by += bs) for (let bx = 0; bx < w; bx += bs, j++) {
+      const bw = oShape === 'wide' ? bs * 2 : oShape === 'tall' ? Math.max(6, Math.round(bs * 0.6)) : bs, bh = oShape === 'tall' ? bs * 2 : oShape === 'wide' ? Math.max(6, Math.round(bs * 0.6)) : bs;
+      for (let by = 0, j = 0; by < h; by += bh) for (let bx = 0; bx < w; bx += bw, j++) {
         const q = hash32(g.seed, j, u.n), kind = q % 10;
         if (kind < 3) continue;   // the live picture shows through
         const dx = kind < 8 ? g.dir * age * bs * 2.4 * g.reach * (0.4 + frac(q >>> 3)) * (1 + e) : 0, dy = kind < 8 ? (frac(q >>> 9) - 0.5) * bs * 1.4 * age : 0;
-        X.clearRect(x0 + bx + dx, y0 + by + dy, bs, bs);
+        X.clearRect(x0 + bx + dx, y0 + by + dy, bw, bh);
         // most stale blocks slide; some smear one column of themselves across the block
-        if (kind < 8) X.drawImage(u.c, bx * sc, by * sc, bs * sc, bs * sc, x0 + bx + dx, y0 + by + dy, bs, bs);
-        else X.drawImage(u.c, (bx + bs * frac(q >>> 5)) * sc, by * sc, Math.max(1, sc), bs * sc, x0 + bx, y0 + by, bs, bs);
+        if (kind < 8) X.drawImage(u.c, bx * sc, by * sc, bw * sc, bh * sc, x0 + bx + dx, y0 + by + dy, bw, bh);
+        else X.drawImage(u.c, (bx + bw * frac(q >>> 5)) * sc, by * sc, Math.max(1, sc), bh * sc, x0 + bx, y0 + by, bw, bh);
       }
     } else {
       if (spare.width < w || spare.height < h) { spare.width = Math.max(spare.width, w); spare.height = Math.max(spare.height, h); }
       spx.clearRect(0, 0, w, h); spx.drawImage(cvs, x0, y0, w, h, 0, 0, w, h);
+      const slip = has ? 0.3 + 1.4 * oVary : 1, up = oShape === 'v', along = up ? h : w, across = up ? w : h;
       for (let i = 0, nb = 8 + Math.round(4 * e); i < nb; i++) {
-        const q = hash32(g.seed, i, Math.floor(slot / (g.hold + i))), rh = Math.max(4, Math.round(h * (0.04 + 0.1 * frac(q >>> 6)))), ry = Math.round((h - rh) * frac(q >>> 16)), dx = Math.round((frac(q >>> 3) - 0.5) * unit * 3.2 * g.reach * (1 + 0.6 * e)) || Math.round(unit);
-        X.clearRect(x0, y0 + ry, w, rh);
-        X.drawImage(spare, 0, ry, w, rh, x0 + dx, y0 + ry, w, rh);
-        if (q % 3 === 0) { X.globalCompositeOperation = 'source-atop'; X.globalAlpha = 0.85; X.fillStyle = FLIPC[q % FLIPC.length]; X.fillRect(x0, y0 + ry, w, rh); X.globalCompositeOperation = 'source-over'; X.globalAlpha = 1; }
+        // a strip (level, or upright) slips along itself; some are recoloured
+        const q = hash32(g.seed, i, Math.floor(slot / (g.hold + i))), th = Math.max(4, Math.round(across * (0.04 + 0.1 * frac(q >>> 6)))), at0 = Math.round((across - th) * frac(q >>> 16)), dd = Math.round((frac(q >>> 3) - 0.5) * unit * 3.2 * g.reach * slip * (1 + 0.6 * e)) || Math.round(unit);
+        const rx = up ? at0 : 0, ry = up ? 0 : at0, rw = up ? th : w, rh = up ? h : th;
+        X.clearRect(x0 + rx, y0 + ry, rw, rh);
+        X.drawImage(spare, rx, ry, rw, rh, x0 + rx + (up ? 0 : dd), y0 + ry + (up ? dd : 0), rw, rh);
+        if (q % 3 === 0) { X.globalCompositeOperation = 'source-atop'; X.globalAlpha = 0.85; X.fillStyle = FLIPC[q % FLIPC.length]; X.fillRect(x0 + rx, y0 + ry, rw, rh); X.globalCompositeOperation = 'source-over'; X.globalAlpha = 1; }
       }
     }
     X.restore();
@@ -440,6 +452,8 @@ export function drawLive(X, s, S, B, now, P) {
     };
   } else {
     if (!owners) claimCells(S, B);
+    // Options: which characters (the sheet holds 46 katakana, then the digits, then symbols), and how fast they change
+    if (g.cs === undefined) { const [set, churn] = optOf(s, 'mix', 0.5); g.cs = { kana: [0, 46], digits: [46, 10], binary: [46, 2], sym: [56, NGLYPH - 56] }[set] || null; g.churn = s.pt ? Math.pow(churn * 2, 2) : 1; }
     // (the mark being drawn is not in the drawing yet, so it owns no cells: it shows all of its own)
     const cells = s._pv ? liveCells(s, S, T) : (s._cellsNow || liveCells(s, S, T)).filter(q => owners.get(cellKey(q)) === s.id);
     pass = (dx, dy, a, col, op) => { X.globalCompositeOperation = op || 'source-over'; drawCells(X, cells, g, col || c, S, slot, e, dx, dy, a); };

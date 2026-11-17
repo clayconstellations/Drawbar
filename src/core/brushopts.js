@@ -37,9 +37,31 @@ export const OPTS = {
     ['d1', 'Slanting up', ic("<path d='M4 13l9-9M5 20L20 5M11 20l9-9'/>")],
     ['d2', 'Slanting down', ic("<path d='M11 4l9 9M4 5l15 15M4 11l9 9'/>")],
   ] },
-  terrain: { title: 'Terrain', vary: 'Roughness', def: { vary: 50 }, shapes: null },
+  terrain: { title: 'Terrain', vary: 'Roughness', def: { shape: 'grid', vary: 50 }, shapes: [
+    ['grid', 'Grid', ic("<path d='M3 8h18M3 12h18M3 16h18M7 5v14M12 5v14M17 5v14'/>")],
+    ['ridges', 'Ridges', ic("<path d='M3 8c3-3 6 3 9 0s6-3 9 0M3 13c3-3 6 3 9 0s6-3 9 0M3 18c3-3 6 3 9 0s6-3 9 0'/>")],
+    ['tri', 'Triangles', ic("<path d='M3 18l4.5-9 4.5 9 4.5-9 4.5 9zM7.5 9h9'/>")],
+    ['contour', 'Contour lines', ic("<path d='M4 7h7v3h9M4 12h4v3h12M4 17h10v2h6'/>")],
+  ] },
+  code: { title: 'Code', vary: 'Churn', def: { shape: 'mix', vary: 50 }, shapes: [
+    ['mix', 'Mixed', ic("<path d='M5 5h6M8 5v7M5 9l6 3M15 6v6h4V6zM6 15h3v4H6zM14 16l5 3M19 16l-5 3'/>")],
+    ['kana', 'Katakana', ic("<path d='M5 6h14M12 6c0 7-2 10-6 13M9 11h9'/>")],
+    ['digits', 'Digits', ic("<path d='M6 8l3-2v12M14 6h5l-3 5c3 0 3.5 2 3.5 3.500 0 2-1.500 3.500-5.500 3.500'/>".replace('3.500','3.5').replace('1.500','1.5').replace('5.500','5.5').replace('3.500','3.5'))],
+    ['binary', 'Ones and zeros', ic("<path d='M7 6v12'/><rect x='13' y='6' width='6' height='12' rx='3'/>")],
+    ['sym', 'Symbols', ic("<path d='M6 8h5M8.5 5.500v5M14 6l5 5M19 6l-5 5M6 16h5M14 14v5h5'/>".replace('5.500','5.5'))],
+  ] },
+  sort: { title: 'Sort', vary: 'Threshold', def: { shape: 'down', vary: 60 }, shapes: [
+    ['down', 'Sort downward', ic("<path d='M12 4v16M6 14l6 6 6-6'/>")], ['up', 'Sort upward', ic("<path d='M12 20V4M6 10l6-6 6 6'/>")],
+    ['left', 'Sort to the left', ic("<path d='M20 12H4M10 6l-6 6 6 6'/>")], ['right', 'Sort to the right', ic("<path d='M4 12h16M14 6l6 6-6 6'/>")],
+  ] },
+  mosh: { title: 'Mosh', vary: 'Hold', def: { shape: 'square', vary: 50 }, shapes: [
+    ['square', 'Square blocks', ic("<rect x='6' y='6' width='12' height='12'/>")], ['wide', 'Wide blocks', ic("<rect x='3' y='8' width='18' height='8'/>")], ['tall', 'Tall blocks', ic("<rect x='8' y='3' width='8' height='18'/>")],
+  ] },
+  blocks: { title: 'Blocks', vary: 'Slip', def: { shape: 'h', vary: 50 }, shapes: [
+    ['h', 'Level strips', ic("<path d='M3 7h13M8 12h13M5 17h13' stroke-width='3'/>")], ['v', 'Upright strips', ic("<path d='M7 3v13M12 8v13M17 5v13' stroke-width='3'/>")],
+  ] },
 };
 // Which options a material has (null: none)
-export const optKind = M => M.wire === 'auto' ? 'solids' : M.nodes ? 'nodes' : OPTS[M.gl] ? M.gl : null;
+export const optKind = M => M.wire === 'auto' ? 'solids' : M.nodes ? 'nodes' : M.glyph ? 'code' : M.under ? M.under : OPTS[M.gl] ? M.gl : null;
 // The options in hand for a kind, made on first use
 export const optsFor = kind => kind ? (ui.opts[kind] || (ui.opts[kind] = { ...OPTS[kind].def })) : null;

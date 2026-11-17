@@ -158,7 +158,7 @@ export function showPage(p) {
   page = p;
   const clipsOn = p === 'clips';
   $('clipsPage').hidden = !clipsOn;
-  $('main').hidden = clipsOn; $('patternBar').hidden = clipsOn;
+  $('app').classList.toggle('onclips', clipsOn);
   if (!clipsOn) requestAnimationFrame(layout);
   $('clipsNav').setAttribute('aria-pressed', String(clipsOn));
   if (clipsOn) renderClips(); else if (preview) endPreview();

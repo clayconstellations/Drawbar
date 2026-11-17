@@ -16,6 +16,7 @@ import { MATS, PALETTE } from '../styles/index.js';
 import { accent } from '../worlds/index.js';
 import { switchWorld } from './settings.js';
 import { TABS, WORLDS, world } from '../worlds/index.js';
+import { syncMod } from './modui.js';
 
 export const mapInput = $('mapInput');
 // The chip in the top bar: map number and tempo, always in view. Tapping it opens the song sheet (map and dice,
@@ -24,13 +25,9 @@ export const syncChip = () => { $('chipMap').textContent = mapInput.value || Str
 export const openSong = open => { $('songSheet').hidden = !open; $('songBtn').setAttribute('aria-expanded', String(open)); };
 // Draw / Play (a phone shows one at a time; a wide screen shows both and ignores this)
 export function setTab(tab) { ui.tab = tab; const a = $('app'); a.classList.toggle('tab-play', tab === 'play'); a.classList.toggle('tab-draw', tab !== 'play'); for (const b of $('tabSeg').children) b.setAttribute('aria-pressed', String(b.dataset.v === tab)); requestAnimationFrame(layout); }
-// The four sound knobs sit in the drawing's corners on a phone (Play tab), and in their own column on a wide screen
+// A wide screen shows both panes, either side of the drawing (the CSS reads the .wide class)
 const wideMq = window.matchMedia('(min-width:700px) and (min-aspect-ratio:5/4)');
-export function placeKnobs() {
-  const ks = ['knDensity', 'knProb', 'knSpace', 'knTone'].map(id => $(id).parentElement), wide = wideMq.matches;
-  ks.forEach((k, i) => { const home = wide ? $('knobRow') : $('kc' + i); if (k.parentElement !== home) home.appendChild(k); });
-  $('app').classList.toggle('wide', wide);
-}
+export function placeKnobs() { $('app').classList.toggle('wide', wideMq.matches); }
 let lastTool = 'glow';
 export const change = fn => { checkpoint(); fn(); rebuild(); syncUI(); };
 // Preferences
@@ -81,7 +78,7 @@ export function syncUI() {
   { const kind = ui.tool === 'erase' ? null : optKind(MATS[ui.color]), O = kind && OPTS[kind], o = optsFor(kind), seg = $('ptShape');
     // In a style with brush options (Glitch) the row keeps its place even when the brush in hand has none,
     // so the brushes above it never move
-    $('optGroup').hidden = !(w.options && w.options.fx); $('optGroup').classList.toggle('empty', !kind);
+    $('optGroup').hidden = false; $('optGroup').classList.toggle('empty', !kind);
     if (kind) {
       if (seg.dataset.kind !== kind) { seg.dataset.kind = kind; seg.innerHTML = (O.shapes || []).map(([v, name, svg]) => `<button data-v="${v}" aria-label="${name}" title="${name}">${svg}</button>`).join(''); seg.hidden = !O.shapes; $('ptVaryL').textContent = O.vary; $('ptVary').setAttribute('aria-label', O.vary); $('optTitle').textContent = O.title; }
       for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.v === o.shape));
@@ -93,7 +90,7 @@ export function syncUI() {
   for (const md of MODES) $('mode-' + md.id).hidden = !w.modes.includes(md.id);
   for (const t of TOOLS) $('tool-' + t.id).hidden = !w.tools.includes(t.id);
   $('tools').classList.toggle('many', w.tools.filter(x => x !== 'erase').length > 4);
-  $('swatches').parentElement.hidden = w.matIdx.length < 2;   // one brush: nothing to pick
+  $('matGroup').classList.toggle('off', w.matIdx.length < 2);   // one brush: nothing to pick (the row keeps its place)
   // Effect brushes (they work on what is beneath them) are square, after a divider
   { const first = w.matIdx.find(i => MATS[i].under); MATS.forEach((M, i) => { const b = $('sw-' + i); b.hidden = !w.matIdx.includes(i); b.style.order = w.matIdx.indexOf(i); b.classList.toggle('fxfirst', i === first); }); }
   $('pixBtn').hidden = !(w.options && w.options.pixel); $('pixBtn').setAttribute('aria-pressed', String(!!score.pixel));
@@ -110,7 +107,7 @@ export function syncUI() {
   for (const t of TOOLS) $('tool-' + t.id).setAttribute('aria-pressed', String(ui.tool === t.id));
   // Colour picker (tabs with a palette): rebuilt when the tab changes; brush swatches are shown in the colour picked
   const cg = $('colors');
-  $('colorGroup').hidden = !w.colors;
+  $('colorGroup').classList.toggle('off', !w.colors);
   // A style whose brushes are plain colours (Geometric) shows them in the same 3 x 3 grid as the colour picker
   $('swatches').classList.toggle('grid9', !!(w.options && w.options.gridMats));
   if (w.colors) {
@@ -131,7 +128,7 @@ export function syncUI() {
   $('redoBtn').disabled = !redoStack.length;
   $('clearBtn').disabled = !score.strokes.length;
   $('pk3w').hidden = free; pk1.draw(); pk2.draw(); pk3.draw(); for (const key in mixKnobs) mixKnobs[key].draw();
-  drawSizeBar(); syncSound();
+  drawSizeBar(); syncSound(); syncMod();
 }
 // All the buttons, the tempo box, the map number and preferences
 export function initControls() {
@@ -220,6 +217,17 @@ export function initControls() {
     });
   }
   mapInput.addEventListener('focus', () => mapInput.select());
+  // The map box can also be dragged, up or right for higher numbers; a plain tap still lets you type
+  { let d = null;
+    mapInput.addEventListener('pointerdown', e => { d = { x: e.clientX, y: e.clientY, v: score.map, on: false, n: score.map }; mapInput.setPointerCapture(e.pointerId); });
+    mapInput.addEventListener('pointermove', e => {
+      if (!d) return;
+      const dv = ((e.clientX - d.x) - (e.clientY - d.y)) / 3;
+      if (!d.on && Math.abs(dv) > 2) { d.on = true; mapInput.blur(); }
+      if (d.on) { d.n = Math.max(0, Math.min(999, Math.round(d.v + dv))); mapInput.value = String(d.n).padStart(3, '0'); syncChip(); e.preventDefault(); }
+    });
+    const end = () => { if (d && d.on) { mapInput.blur(); setMap(d.n); } d = null; };
+    mapInput.addEventListener('pointerup', end); mapInput.addEventListener('pointercancel', end); }
   mapInput.addEventListener('input', () => {
     const v = mapInput.value.replace(/\D/g, '').slice(0, 3);
     mapInput.value = v;
@@ -246,7 +254,7 @@ export function initControls() {
   showGlide();
   $('shapeSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v) { prefs.shape = v; savePrefs(); applyView(); } });
   $('visualBtn').addEventListener('click', () => setVisual(true));
-  $('main').addEventListener('click', () => { if (isVisual()) setVisual(false); });
+  $('left').addEventListener('click', () => { if (isVisual()) setVisual(false); });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && isVisual()) setVisual(false); });
 
 }

@@ -3,7 +3,8 @@ import { COPIES, TURNS } from '../canvas/index.js';
 import { $ } from './dom.js';
 import { clamp } from './math.js';
 import { rebuild } from './settings.js';
-import { MIX_DEF, checkpoint, mix, prefs, savePrefs, score, ui } from './state.js';
+import { MIX_DEF, checkpoint, gv, live, mix, prefs, savePrefs, score, sv, ui } from './state.js';
+import { modOn } from './mod.js';
 import { syncUI } from './ui.js';
 import { redrawSoon } from '../render/compose.js';
 import { applySpace, applyTone, applyVolumes } from '../sound/graph.js';
@@ -86,7 +87,7 @@ export function initKnobs() {
   for (const [id, key, onChange, col] of [['knDensity', 'density', () => {}, '#62c6ff'], ['knProb', 'prob', () => {}, '#f58bc0'], ['knSpace', 'space', () => applySpace(), '#5fe6c0'], ['knTone', 'tone', () => applyTone(), '#ffd76b']]) {
     mixKnobs[key] = knob($(id), {
       range: () => [0, 1], px: 170, def: () => MIX_DEF[key],
-      get: () => mix[key], set: v => { mix[key] = v; onChange(); },
+      get: () => mix[key], set: v => { mix[key] = v; if (!modOn(key)) live[key] = v; onChange(); },
       fmt: v => Math.round(v * 100),
       color: () => col,
     });
@@ -97,15 +98,15 @@ export function initKnobs() {
   });
   pk1 = knob($('pk1'), {
     range: () => capped(pm(), P1[pm()][0], P1[pm()].slice(1, 3)), smooth: true, plain: true, int: true, px: () => pm() === 'kaleido' ? 140 : pm() === 'free' ? 220 : 90, def: () => pm() === 'free' ? 50 : world().start[P1[pm()][0]],
-    get: () => score[P1[pm()][0]],
-    set: v => { score[P1[pm()][0]] = v; redrawSoon(); },
+    get: () => gv(P1[pm()][0]),
+    set: v => { sv(P1[pm()][0], v); redrawSoon(); },
     fmt: v => P1[pm()][4](v),
     color: accent, onStart: checkpoint, onEnd: () => { rebuild(); syncUI(); },
   });
   pk2 = knob($('pk2'), {
     range: () => capped(pm(), P2[pm()][0], P2[pm()].slice(1, 3)), smooth: true, plain: true, int: () => P2[pm()][5], px: () => pm() === 'kaleido' ? 160 : 90, def: () => pm() === 'kaleido' ? 0 : world().start.turns,
-    get: () => score[P2[pm()][0]],
-    set: v => { score[P2[pm()][0]] = P2[pm()][5] ? v : Math.round(v * 100) / 100; redrawSoon(); },
+    get: () => gv(P2[pm()][0]),
+    set: v => { sv(P2[pm()][0], P2[pm()][5] ? v : Math.round(v * 100) / 100); redrawSoon(); },
     fmt: v => P2[pm()][4](v),
     color: accent, onStart: checkpoint, onEnd: () => { rebuild(); syncUI(); },
   });
@@ -114,7 +115,7 @@ export function initKnobs() {
   // Size in kaleidoscope and tiles (in free mode the first knob is Size)
   pk3 = knob($('pk3'), {
     range: () => [0, 100], smooth: true, plain: true, int: true, px: 220, def: () => 50,
-    get: () => score.fscale, set: v => { score.fscale = v; redrawSoon(); },
+    get: () => gv('fscale'), set: v => { sv('fscale', v); redrawSoon(); },
     fmt: v => Math.round(v),
     color: accent, onStart: checkpoint, onEnd: () => { rebuild(); syncUI(); },
   });

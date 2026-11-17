@@ -25,8 +25,13 @@ export function layout() {
   w = Math.max(120, Math.floor(w)); h = Math.max(68, Math.floor(h));
   if (forced) [w, h] = forced;
   const st = $('stage'); st.style.width = w + 'px'; st.style.height = h + 'px';
+  // Centre the drawing on the screen itself where there is room (it sits between the top rows and the pane, which are
+  // not the same height): slide it within its own cell, never past the cell's edges
+  if (visual) st.style.translate = '';
+  else { const cell = $('left').getBoundingClientRect(), app = $('app').getBoundingClientRect(), room = Math.max(0, (cell.height - h) / 2);
+    const d = Math.max(-room, Math.min(room, (app.top + app.height / 2) - (cell.top + cell.height / 2))); st.style.translate = `0 ${Math.round(d)}px`; }
   // Corner controls: as big as fits between the circle and the corner of its square (0.146 of the width)
-  st.style.setProperty('--corner', Math.round(Math.max(30, Math.min(52, w * 0.142))) + 'px');
+  st.style.setProperty('--corner', Math.round(Math.max(34, Math.min(58, w * 0.146))) + 'px');
   const key = [w, h, wide, visual, window.devicePixelRatio, pixelScale()].join();
   if (key !== lastDims) { lastDims = key; resizeCanvas(w, h, wide); }
   // The largest brush is as big on screen as the size control (a button), whatever the size of the drawing

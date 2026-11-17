@@ -9,6 +9,6 @@ export default {
   tools: ['circle', 'square', 'triangle', 'hexagon', 'star', 'erase'],
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 120, copies: 14, tiles: 6, turns: 4, rotate: true },
-  start: { mode: 'kaleido', copies: 6, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'circle', color: 'Yellow' },
+  start: { mode: 'free', copies: 6, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'circle', color: 'Yellow' },
   render: { sprites: true },
 };

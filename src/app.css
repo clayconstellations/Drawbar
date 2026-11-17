@@ -441,3 +441,104 @@ html.light{filter:invert(1) hue-rotate(180deg)}
   .app.wide .panel{width:290px} #optGroup{min-height:32px} .tabseg button{min-height:28px} .pickcol{gap:5px}
 }
 .corner.playc svg{width:100%; height:100%}
+
+/* ===== v34: the drawing never moves. One grid: top rows, the drawing's cell, one pane cell that both panes share
+   (so its height is the taller pane's, whatever the tab), each row of a pane keeping its place in every style. ===== */
+.app{display:grid; grid-template-columns:minmax(0, 1fr); grid-template-rows:auto minmax(0, 1fr) auto; grid-template-areas:"top" "stage" "pane"; gap:8px}
+.top{grid-area:top; display:flex; flex-direction:column; flex-wrap:nowrap; align-items:stretch; gap:6px}
+.bar1, .bar2{display:flex; align-items:center; gap:5px; min-width:0}
+.bar2{justify-content:center; gap:8px}
+.bar1 .grow{flex:1}
+.bar1 .brand{margin-right:8px}
+.left{grid-area:stage; display:grid; place-items:center; min-height:0; min-width:0; width:auto; height:auto; overflow:visible}
+.pane{grid-area:pane; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0}
+.app.tab-draw:not(.wide) #playPane, .app.tab-play:not(.wide) #drawPane{visibility:hidden; pointer-events:none}
+.slot{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-width:0}
+#matGroup{min-height:41px} .optrow{min-height:40px} #colorGroup{min-height:30px}
+.slot.off > *{visibility:hidden}
+#optGroup{min-height:0; flex:none} #optGroup.empty{visibility:hidden} #optGroup.empty .row{visibility:hidden}
+.app.onclips > .left, .app.onclips > .pane, .app.onclips .bar2{display:none}
+.clips{grid-row:2 / -1; grid-column:1 / -1}
+.app.visual > .top, .app.visual > .pane{display:none}
+.app.visual .left{position:fixed; inset:0; z-index:30; background:var(--bg); cursor:pointer}
+/* Corners of the drawing's square: the pattern knobs and Mirror, in both tabs */
+.corner{position:absolute; width:var(--corner, 48px); height:var(--corner, 48px); border-radius:0; display:grid; place-items:center; z-index:2}
+.corner .kwrap{width:100%; gap:1px}
+.corner .kn, .corner .icon.round{width:calc(var(--corner, 48px) - 15px); height:calc(var(--corner, 48px) - 15px); min-height:0}
+.corner .kn svg{width:100%; height:100%}
+.corner .icon.round svg{width:54%; height:54%}
+.corner .kl{font-size:9px; line-height:1.1; white-space:nowrap}
+/* Draw pane */
+.drawrow{display:flex; align-items:center; justify-content:center; gap:6px; width:100%; flex-wrap:nowrap}
+.drawrow .sizedot{width:42px; height:42px; position:static}
+.drawrow .tool, #eraseSlot .tool{width:42px; height:42px; border-radius:9px; flex:0 1 42px}
+#eraseSlot{display:block; flex:none} #eraseSlot .tool svg{width:23px; height:23px}
+.drawrow .tool span{display:none}
+#clearBtn{width:36px; min-height:38px; flex:none; margin-left:4px}
+.optrow .seg.fx button{min-height:32px; padding:0 8px; font-size:12.5px}
+/* Play pane: the four sound knobs, then modulation for whichever knob was touched last */
+#playPane .knobs.sound{border:0; background:none; padding:0; gap:clamp(8px, 4vw, 26px); display:flex}
+#playPane .kn.big{width:44px; height:44px} #playPane .kwrap.big{width:62px} #playPane .kn.big .kv{font-size:13px}
+.modedit{display:flex; flex-direction:column; align-items:center; gap:6px; width:100%}
+.modhead{display:flex; align-items:center; justify-content:center; gap:5px; width:100%}
+.modhead .toggle{min-height:34px; padding:0 9px; font-size:12.5px; font-weight:700; white-space:nowrap}
+.modhead .toggle[aria-pressed="true"]{border-color:var(--ink); color:var(--ink)}
+.modon{min-width:86px}
+.modhead .seg.mini button{width:30px; min-height:28px} .modhead .seg.mini svg{width:18px; height:18px}
+.modknobs{display:flex; justify-content:center; gap:5px; width:100%}
+.modknobs .kwrap{width:42px} .modknobs .kn{width:38px; height:38px} .modknobs .kn .kv{font-size:10px} .modknobs .kl{font-size:9.5px}
+.kn[aria-disabled="true"]{opacity:.3}
+.kn.target{outline:2px solid var(--fg); outline-offset:2px}
+.kn.modded::after{content:""; position:absolute; right:-1px; top:-1px; width:8px; height:8px; border-radius:50%; background:var(--ink); box-shadow:0 0 6px var(--ink)}
+/* Phones */
+@media (max-width:440px){
+  .bar1{gap:4px} .bar1 .icon{width:32px; min-height:36px} .bar1 .icon svg{width:18px; height:18px}
+  .songchip{font-size:15px; padding:0 7px; gap:5px; height:36px}
+  .bar2{gap:6px} .tabseg button{padding:0 11px; min-height:32px} .seg.modes button{width:34px; min-height:32px} .stylebtn{min-height:38px; font-size:14px; padding:0 10px}
+}
+@media (max-width:372px){
+  .bar1{gap:3px} .bar1 .icon{width:28px} .songchip{font-size:13.5px; padding:0 5px; gap:4px}
+  .drawrow{gap:4px} .drawrow .tool, #eraseSlot .tool, .drawrow .sizedot{width:38px; height:38px; flex-basis:38px}
+  .modhead{gap:3px} .modhead .toggle{padding:0 6px; font-size:11.5px} .modon{min-width:70px} .modhead .seg.mini button{width:26px}
+  .modknobs{gap:3px} .modknobs .kwrap{width:40px} .modknobs .kn{width:36px; height:36px}
+  .tabseg button{padding:0 8px} .stylebtn{font-size:13px; padding:0 8px}
+}
+/* Wide: the drawing in the middle; top area and Play pane left of it, Draw pane right */
+.app.wide{grid-template-columns:236px minmax(0, 1fr) 236px; grid-template-rows:auto minmax(0, 1fr); grid-template-areas:"top stage draw" "play stage draw"; column-gap:18px; row-gap:16px}
+.app.wide #drawPane{grid-area:draw; align-self:center; gap:12px}
+.app.wide #playPane{grid-area:play; align-self:start; gap:14px}
+.app.wide .bar1{flex-wrap:wrap; gap:6px} .app.wide .bar1 .brand{flex-basis:100%} .app.wide .bar1 .grow{display:none}
+.app.wide .bar1 .icon{width:36px}
+.app.wide .tabseg{display:none} .app.wide .bar2{justify-content:flex-start; flex-wrap:wrap}
+.app.wide #swatches:not(.grid9){flex-wrap:wrap; width:calc(5 * 40px + 8px)} .app.wide #swatches:not(.grid9) .sw{width:40px; height:40px; flex-basis:40px}
+.app.wide #colors, .app.wide .swatches.grid9{grid-template-columns:repeat(9, 25px)} .app.wide #colors .sw, .app.wide .swatches.grid9 .sw{width:25px; height:26px}
+.app.wide .drawrow{flex-wrap:wrap; row-gap:6px} .app.wide .optrow{flex-direction:column}
+.app.wide #ptShape button{width:30px}
+.app.wide #playPane .knobs.sound{gap:8px} .app.wide #playPane .kwrap.big{width:54px}
+.app.wide .modhead{flex-wrap:wrap} .app.wide .modknobs{flex-wrap:wrap; row-gap:8px}
+.app.wide .songsheet{left:max(16px, env(safe-area-inset-left, 0px)); right:auto}
+@media (max-height:460px){
+  .app.wide{grid-template-columns:214px minmax(0, 1fr) 214px; row-gap:6px; column-gap:10px}
+  .app.wide .bar1 .brand{display:none} .app.wide #drawPane{gap:5px} .app.wide #playPane{gap:5px}
+  .app.wide #swatches:not(.grid9){width:calc(5 * 30px + 8px)} .app.wide #swatches:not(.grid9) .sw{width:30px; height:30px; flex-basis:30px}
+  .app.wide #colors, .app.wide .swatches.grid9{grid-template-columns:repeat(9, 22px)} .app.wide #colors .sw, .app.wide .swatches.grid9 .sw{width:22px; height:20px}
+  #matGroup{min-height:0} .optrow{min-height:0} .modknobs .kl{display:none} .app.wide .modknobs{row-gap:3px} .modknobs .kn{width:32px; height:32px}
+  .drawrow .tool, #eraseSlot .tool, .drawrow .sizedot{width:34px; height:34px; flex-basis:34px}
+  .app.wide #playPane .kn.big{width:36px; height:36px}
+}
+/* The options row: the effect at a fixed place on the left, the brush's shape choices starting at a fixed place, its knob at the right edge */
+.optrow{display:grid; grid-template-columns:max-content minmax(0, 1fr); column-gap:8px; height:40px; min-height:40px; overflow:hidden; align-items:center}
+.optrow #fxGroup{order:-1}
+#optGroup{width:100%; height:40px; min-height:0; justify-content:center} #optGroup .row{display:flex; justify-content:space-between; align-items:center; width:100%; gap:6px}
+.drawrow .tools .tool, .drawrow .tools.many .tool{height:42px}
+@media (max-width:372px){ .drawrow .tools .tool, .drawrow .tools.many .tool{height:38px} .drawrow .tools.many .tool{flex-basis:34px} #ptShape button{width:27px} }
+.app.wide .optrow{display:flex; flex-direction:column; height:auto; overflow:visible; gap:8px} .app.wide #optGroup{height:auto}
+@media (max-height:460px){ .app.wide #ptShape button{width:23px} .app.wide #optGroup .kn{width:28px; height:28px} }
+#mapInput{touch-action:none; cursor:ns-resize}
+@media (max-width:440px){ .modhead{gap:4px} .modhead .toggle{padding:0 7px; font-size:12px} .modon{min-width:72px} .modhead .seg.mini button{width:28px} #modName{overflow:hidden; text-overflow:ellipsis} }
+@media (max-height:460px){
+  .app.wide .modknobs{flex-wrap:nowrap; gap:3px} .app.wide .modknobs .kwrap{width:27px} .app.wide .modknobs .kn{width:26px; height:26px} .app.wide .modknobs .kn .kv{font-size:8px}
+  .app.wide .modhead{gap:3px} .app.wide .modhead .toggle{min-height:26px; padding:0 6px; font-size:11px} .app.wide .modon{min-width:0} .app.wide .modhead .seg.mini button{width:22px; min-height:22px}
+  .app.wide .bar1 .icon{width:30px; min-height:32px} .app.wide .songchip{height:32px; font-size:13px} .app.wide .stylebtn{min-height:34px} .app.wide .seg.modes button{min-height:28px}
+  .app.wide #playPane .kl{display:none}
+}

@@ -2,7 +2,7 @@
 import { toneIdx } from '../styles/index.js';
 import { fs } from '../canvas/index.js';
 import { clamp, fold, hash32, hashFrac, lerp, mod, mtof, mulberry32 } from '../core/math.js';
-import { mix, score } from '../core/state.js';
+import { live, score } from '../core/state.js';
 import { audioOffset, audioReady, beatAt, lastEnd, paused, pausedTotal, playing, rotAt, secAt, sessionNow, setLastEnd } from '../core/transport.js';
 import { ARR, LANES, euclid } from './arranger.js';
 import { actx, spaceAmt, toneEnv } from './graph.js';
@@ -54,14 +54,14 @@ export function schedule() {
   LANES.forEach((lane, li) => {
     const P = lane.period, n = lane.events.length;
     if (!(P > 0) || !n) return;
-    const keepK = Math.round(mix.density * n);
+    const keepK = Math.round(live.density * n);
     const beat = lane.base === 'beat', lo = (beat ? B0 : S0) - lane.origin, hi = (beat ? B1 : S1) - lane.origin;
     for (let c = Math.floor(lo / P) - 1; c <= Math.floor(hi / P); c++) for (const ev of lane.events) {
       const tt = (c + ev.ph) * P;
       if (tt < lo || tt >= hi) continue;
       // Density skips notes in a fixed, evenly spread pattern; probability rolls a repeatable die per note per cycle
       if (keepK < n && !euclid(keepK, n, ev.idx, 0)) continue;
-      if (mix.prob < 1 && hashFrac(ev.s.id, ev.idx, c, li, 913) >= mix.prob) continue;
+      if (live.prob < 1 && hashFrac(ev.s.id, ev.idx, c, li, 913) >= live.prob) continue;
       let Sev = beat ? secAt(tt + lane.origin) : tt + lane.origin;
       if (lane.gate && !lane.gate(Math.floor(beatAt(Sev) / 4))) continue;
       if (lane.free && score.frot && ev.x != null) {

@@ -37,7 +37,7 @@ for (const [name, width, height] of sizes) {
     await page.screenshot({ path: `tests/out-${name}-${tab}.png` });
     const check = await page.evaluate(() => {
       const r = id => document.getElementById(id).getBoundingClientRect();
-      const st = r('stage'), kn = r('panel'), d = document.documentElement;
+      const st = r('stage'), kn = r('drawPane'), d = document.documentElement;
       return { scroll: d.scrollHeight - innerHeight, sideScroll: d.scrollWidth - innerWidth, knobsOverlap: kn.top < st.bottom - 1 && kn.bottom > st.top && kn.left < st.right - 1 && kn.right > st.left + 1 };
     });
     const ok = check.scroll <= 0 && check.sideScroll <= 0 && !check.knobsOverlap;

@@ -9,7 +9,7 @@ export default {
   tools: ['glow', 'erase'],
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 40, copies: 6, tiles: 4, turns: 3, rotate: true },
-  start: { mode: 'kaleido', copies: 6, spiral: 0, tiles: 4, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Brush ink' },
+  start: { mode: 'free', copies: 6, spiral: 0, tiles: 4, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Brush ink' },
   // Dark canvas like the other styles (v30; it was paper). Light mode in Preferences turns the whole app light.
   render: { sprites: true, noGuides: true },
 };

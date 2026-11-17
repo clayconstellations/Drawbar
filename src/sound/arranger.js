@@ -46,6 +46,41 @@ export function select(cands, budget, steps, poly, clocked, swing) {
   return { keep, kw, dw };
 }
 
+// Effect strokes (Glitch: Sort, Mosh, Blocks) are silent themselves, but they change the notes of what lies beneath
+// them, as the musical twin of what they do to the picture (v34). Nothing is read from the picture: a note is
+// "covered" when the point of the stroke it comes from lies inside the effect's patch (three brush widths, as drawn)
+// and that stroke was drawn before the effect. Options on the effect stroke (direction, threshold, hold, slip) count.
+//   Sort:   the covered notes keep their times but their pitches are put in order (the last part of them, by Threshold)
+//   Mosh:   they stutter: each short run of notes holds the first one's pitch (longer runs with more Hold)
+//   Blocks: runs of notes slip in time, or jump an octave (further with more Slip)
+function effectPass(cands, steps) {
+  const fx = score.strokes.filter(s => MATS[s.color].under && !HIDDEN.has(s) && s._xs);
+  if (!fx.length || !cands.length) return;
+  const order = new Map(score.strokes.map((s, i) => [s, i]));
+  for (const f of fx) {
+    const kind = MATS[f.color].under, n = f.pts.length, st = Math.max(1, Math.floor(n / 40)), pts = [], at = order.get(f);
+    for (let i = 0; i < n; i += st) pts.push([f._xs[i], f._ys[i], f._w[i] * 3]);
+    const cov = cands.filter(c => c.sx != null && order.get(c.s) < at && pts.some(p => Math.hypot(c.sx - p[0], c.sy - p[1]) < p[2]));
+    if (cov.length < 2) continue;
+    cov.sort((a, b) => (a.ph ?? a.pos) - (b.ph ?? b.pos));
+    const shape = (f.pt && f.pt.shape) || '', v = f.pt && f.pt.vary != null ? f.pt.vary / 100 : 0.5;
+    if (kind === 'sort') {
+      const k0 = Math.floor(cov.length * (1 - Math.max(v, 0.15))), hs = cov.slice(k0).map(c => c.h).sort((a, b) => a - b);
+      if (shape === 'down' || shape === 'left' || shape === '') hs.reverse();
+      for (let i = k0; i < cov.length; i++) cov[i].h = hs[i - k0];
+    } else if (kind === 'mosh') {
+      const run = 2 + Math.round(v * 4);
+      for (let i = 0; i < cov.length; i++) cov[i].h = cov[i - i % run].h;
+    } else {
+      for (let i = 0, q = 0; i < cov.length; q++) {
+        const hsh = hashFrac(f.id, q, 31), len = 2 + Math.floor(hashFrac(f.id, q, 32) * 3), what = hsh < 0.4 ? 0 : hsh < 0.75 ? 1 : 2;
+        const slide = (hashFrac(f.id, q, 33) < 0.5 ? -1 : 1) * Math.max(1, Math.round(v * 4)) / steps, oct = hashFrac(f.id, q, 34) < 0.5 ? -1 : 1;
+        for (let j = i; j < Math.min(i + len, cov.length); j++) { const c = cov[j]; if (what === 1) { if (c.ph != null) c.ph = mod(c.ph + slide, 1); } else if (what === 2) c.oct = (c.oct || 0) + oct; }
+        i += len;
+      }
+    }
+  }
+}
 export function arrange() {
   // Strokes hidden under newer ones are out of the music too
   const zoom = fs();   // Size: what you hear is read from the drawing as it appears
@@ -91,16 +126,16 @@ export function arrange() {
             // The pattern turns clockwise; every copy sounds as it passes the top. Smaller copies sit lower and quieter
             for (let k = 0; k < KC.length; k += kStep) {
               const cp = KC[k], h = relH(r0 * cp.s), wk = w * (0.35 + 0.65 * cp.s), ak = a + cp.a;
-              cands.push({ ph: sPhase(ak), h, w: wk, s, rec, m: k > 0, pan: clamp(Math.cos(ak) * r0 * cp.s, -1, 1) * 0.6 });
-              if (score.mirror) cands.push({ ph: sPhase(-a + cp.a), h: clamp(2 * s._hm - h, 0, 1), w: wk * 0.9, s, rec, m: true, pan: -clamp(Math.cos(ak) * r0 * cp.s, -1, 1) * 0.6 });
+              cands.push({ sx: q.x, sy: q.y, ph: sPhase(ak), h, w: wk, s, rec, m: k > 0, pan: clamp(Math.cos(ak) * r0 * cp.s, -1, 1) * 0.6 });
+              if (score.mirror) cands.push({ sx: q.x, sy: q.y, ph: sPhase(-a + cp.a), h: clamp(2 * s._hm - h, 0, 1), w: wk * 0.9, s, rec, m: true, pan: -clamp(Math.cos(ak) * r0 * cp.s, -1, 1) * 0.6 });
             }
           } else {
             // Tiles: each turned (and mirrored) copy sounds as it rises past the reading line; on hexagons the in-between row answers half a cycle later
             const { a: A, CH, rowH, hex } = TG;
             TG.mats.forEach((M, i) => {
               const x = (M[0] * q.x + M[2] * q.y) * zoom, y = (M[1] * q.x + M[3] * q.y) * zoom, hr = mod(x, A) / A, h = relH(hr);
-              cands.push({ ph: mod(y, CH) / CH, h, w: w * (i ? 0.75 : 0.9), s, rec, m: i > 0, pan: (hr * 2 - 1) * 0.6 });
-              if (hex) { const h2 = mod(x + A / 2, A) / A; cands.push({ ph: mod(y + rowH, CH) / CH, h: relH(h2), w: w * 0.65, s, rec, m: true, pan: (h2 * 2 - 1) * 0.6 }); }
+              cands.push({ sx: q.x, sy: q.y, ph: mod(y, CH) / CH, h, w: w * (i ? 0.75 : 0.9), s, rec, m: i > 0, pan: (hr * 2 - 1) * 0.6 });
+              if (hex) { const h2 = mod(x + A / 2, A) / A; cands.push({ sx: q.x, sy: q.y, ph: mod(y + rowH, CH) / CH, h: relH(h2), w: w * 0.65, s, rec, m: true, pan: (h2 * 2 - 1) * 0.6 }); }
             });
           }
         }
@@ -122,9 +157,9 @@ export function arrange() {
         for (const i of animEventIdx(s)) {
           const pt = s.pts[i], sn = Math.min(s._sp[i] / 2.2, 1);
           const pos = pt[2] / s._dur * plen * 0.98, h = relH(rawH(pt[0], pt[1])), w = 0.45 + 0.55 * (1 - sn), pan = clamp(pt[0] * fs(), -1, 1) * 0.6;
-          cands.push({ pos: off + pos, h, w, s, rec, m: false, pan, x: pt[0], y: pt[1] });
+          cands.push({ sx: pt[0], sy: pt[1], pos: off + pos, h, w, s, rec, m: false, pan, x: pt[0], y: pt[1] });
           // Mirrored: the reflection answers half a phrase later, a step away and from the other side
-          if (score.fmirror) cands.push({ pos: off + mod(pos + plen / 2, plen), h, w: w * 0.6, s, rec, m: true, pan: -pan, shift: MAP.canonInt, x: -pt[0], y: pt[1] });
+          if (score.fmirror) cands.push({ sx: pt[0], sy: pt[1], pos: off + mod(pos + plen / 2, plen), h, w: w * 0.6, s, rec, m: true, pan: -pan, shift: MAP.canonInt, x: -pt[0], y: pt[1] });
         }
         off += plen;
       }
@@ -134,6 +169,7 @@ export function arrange() {
       steps = clocked ? Math.round(off * 4) : Math.max(8, Math.round(off * 8));
     }
     const bars = base === 'beat' ? period / 4 : period * score.tempo / 240;
+    effectPass(cands, steps);
     const r = select(cands, BUDGET.lines * P.dens * bars, steps, true, clocked, P.swing);
     kept += r.kw; dropped += r.dw;
     lanes.push({ role: 'lines', base, period, origin, events: r.keep, free: score.mode === 'free' });
@@ -150,8 +186,9 @@ export function arrange() {
     const steps = clocked ? s._Pb * 4 : Math.max(8, Math.round(s._dur * 8)), rec = recOf(s);
     const cands = animEventIdx(s).map(i => {
       const pt = s.pts[i], sn = Math.min(s._sp[i] / 2.2, 1);
-      return { ph: pt[2] / s._dur, h: relH(rawH(pt[0], pt[1])), w: 0.4 + 0.5 * (1 - sn), s, rec, m: false, pan: clamp(pt[0] * zoom, -1, 1) * 0.6 };
+      return { sx: pt[0], sy: pt[1], ph: pt[2] / s._dur, h: relH(rawH(pt[0], pt[1])), w: 0.4 + 0.5 * (1 - sn), s, rec, m: false, pan: clamp(pt[0] * zoom, -1, 1) * 0.6 };
     });
+    effectPass(cands, steps);
     const r = select(cands, Math.max(3, 8 * P.dens), steps, true, clocked, P.swing);
     kept += r.kw; dropped += r.dw;
     if (kale && C > 1 && C <= 7 && score.spiral < 0.3) {
