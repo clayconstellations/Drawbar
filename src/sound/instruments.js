@@ -5,6 +5,14 @@ import { MAP } from './maps.js';
 import { N } from './nodes.js';
 
 export let voiceEnds = [];
+export const resetVoices = () => { voiceEnds = []; waves.clear(); };
+// Wavetable: two seeded spectra per map, as periodic waves (made once per map)
+const waves = new Map();
+function mapWaves() {
+  let w = waves.get(MAP.n);
+  if (!w) { const mk = a => actx.createPeriodicWave(new Float32Array([0, ...a.map(() => 0)]), new Float32Array([0, ...a])); w = { a: mk(MAP.syn.waveA), b: mk(MAP.syn.waveB) }; waves.set(MAP.n, w); }
+  return w;
+}
 export function strokeWave(s) {
   if (!s) return null;
   if (s._wave) return s._wave;
@@ -91,6 +99,40 @@ export function voice(type, f, t, vel, dur, pan, bright, s) {
       const o = osc('triangle', f); o.frequency.setValueAtTime(f * 1.5, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.03);
       const k = osc('sine', f * 2.01);
       o.connect(env(t, 0.002, vel * 0.3, 0.3)).connect(out); k.connect(env(t, 0.001, vel * 0.1 * Math.min(bright, 1.3), 0.08)).connect(out); src.push(o, k);
+      break;
+    }
+    case 'fm': {
+      // Two-operator FM (in some maps the modulator is itself modulated): the index starts high and falls, so each
+      // note opens bright and settles. Ratio, index and envelope are the map's own. The index eases off up high.
+      const P = MAP.syn; end = t + Math.min(dur + P.rel * 3 + 0.3, 4);
+      const c = osc('sine', f), m = osc('sine', f * P.ratio), mg = gain(0);
+      const idx = f * P.ratio * P.index * (0.45 + 0.7 * Math.min(bright, 1.6)) * (0.5 + 0.5 * vel) * Math.min(1, 900 / f);
+      mg.gain.setValueAtTime(idx, t); mg.gain.exponentialRampToValueAtTime(Math.max(idx * P.sus, 1), t + P.idxDec);
+      m.connect(mg).connect(c.frequency); src.push(c, m);
+      if (P.index2) { const m2 = osc('sine', f * P.ratio * P.ratio2), g2 = gain(f * P.ratio * P.index2 * Math.min(1, 700 / f)); m2.connect(g2).connect(m.frequency); src.push(m2); }
+      c.connect(adsr(t, P.att, vel * 0.15, P.hold, dur, P.rel)).connect(out);   // levels of the three synth voices are set by measurement, to sit in the middle of the older instruments
+      break;
+    }
+    case 'add': {
+      // Additive: up to ten sine partials from the map's own spectrum, each with its own attack and decay (higher
+      // ones speak later and die sooner), in some maps slightly stretched like a struck bar
+      const P = MAP.syn; end = t + Math.min(dur + P.dec + 0.4, 4.5);
+      for (let k = 1; k <= 10; k++) {
+        const fk = f * k * (1 + P.stretch * k * k);
+        if (fk > 10000) break;
+        const amp = vel * 0.28 * P.amps[k - 1] * (k > 3 ? Math.min(bright, 1.5) : 1);
+        const o = osc('sine', fk); o.connect(env(t, P.att * (1 + P.spread * k), amp, Math.max(0.12, (P.dec + dur * 0.5) / (1 + P.damp * k)))).connect(out); src.push(o);
+      }
+      break;
+    }
+    case 'wt': {
+      // Wavetable: two of the map's own waveforms, the first giving way to the second over the note, a little detuned
+      const P = MAP.syn, w = mapWaves(); end = t + Math.min(dur + 1.3, 3.6);
+      const a = actx.createOscillator(), b = actx.createOscillator(); a.setPeriodicWave(w.a); b.setPeriodicWave(w.b); a.frequency.value = b.frequency.value = f; b.detune.value = P.detune;
+      const ga = gain(1), gb = gain(0), T = P.morph * (dur + 0.5);
+      ga.gain.setValueAtTime(1, t); ga.gain.linearRampToValueAtTime(0.15, t + T); gb.gain.setValueAtTime(0, t); gb.gain.linearRampToValueAtTime(1, t + T);
+      const lp = filt('lowpass', Math.min(f * (3 + 5 * bright) + 300, 12000), 0.9), e = env(t, P.att, vel * 0.3, Math.min(dur + 1, 2.8));
+      a.connect(ga).connect(lp); b.connect(gb).connect(lp); lp.connect(e).connect(out); src.push(a, b);
       break;
     }
     case 'pad': {

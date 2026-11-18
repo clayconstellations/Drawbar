@@ -6,10 +6,13 @@ export const SCALE_DEFS = [
   [0, 2, 4, 5, 7, 9, 10], [0, 2, 3, 5, 7, 8, 11], [0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8], [0, 2, 4, 6, 8, 10],
 ];
 export const LINE_POOLS = { glow: ['glass', 'wave', 'pad', 'bell'], beads: ['wood', 'pluck', 'glass', 'wave', 'piano'], loop: ['wave', 'pluck', 'piano', 'bell'] };
-export const INST_OCT = { piano: 0, pluck: 0, wave: 0, bell: 1, glass: 1, wood: 1, pad: -1 };
+export const INST_OCT = { piano: 0, pluck: 0, wave: 0, bell: 1, glass: 1, wood: 1, pad: -1, fm: 0, add: 0, wt: 0 };
 export const FX = ['vibrato', 'tremolo', 'wow', 'delay', 'granular', 'shimmer', 'smear', 'thin'];
 export const SPACE_FX = ['delay', 'granular', 'shimmer', 'smear'];
 export const FAMS = ['piano', 'pluck', 'wave', 'bell', 'glass', 'wood', 'pad', 'drums', 'drones'];
+// Synth families added in v35 (FM, additive, wavetable). Kept apart from FAMS: a map draws its seeded settings for
+// FAMS in order, so adding to that list would change every existing map.
+export const FAMS2 = ['fm', 'add', 'wt'];
 export const BUDGET = { drums: 16, lines: 9 };
 export const MODT = {
   'delay.send': { p: () => N.dlySend.gain, scale: 0.35 },

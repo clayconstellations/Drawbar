@@ -60,6 +60,7 @@ export function schedule() {
       const tt = (c + ev.ph) * P;
       if (tt < lo || tt >= hi) continue;
       // Density skips notes in a fixed, evenly spread pattern; probability rolls a repeatable die per note per cycle
+      if (ev.cyc && mod(c, ev.cyc[0]) !== ev.cyc[1]) continue;   // sounds only on some turns of the pattern (snare rolls)
       if (keepK < n && !euclid(keepK, n, ev.idx, 0)) continue;
       if (live.prob < 1 && hashFrac(ev.s.id, ev.idx, c, li, 913) >= live.prob) continue;
       let Sev = beat ? secAt(tt + lane.origin) : tt + lane.origin;

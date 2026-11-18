@@ -8,6 +8,7 @@ import { TOOL } from '../core/tools.js';
 import { HIDDEN } from '../render/compose.js';
 import { MAP } from './maps.js';
 import { BUDGET, FX } from './vocab.js';
+import { world } from '../worlds/index.js';
 
 // Material colour as an angle. Fixed at the 15 materials of v18, so adding materials never changes the music of a drawing.
 const HUE_STEPS = 15;
@@ -230,15 +231,30 @@ export function buildDrums(list, P, solo) {
   const budget = solo ? Math.max(6, 16 * P.dens) : Math.max(3, 8 * P.dens);
   let tot = pcs.reduce((a, p) => a + p.k, 0);
   while (tot > budget) { const i = pcs[2].k > 2 ? 2 : pcs[3].k > 0 ? 3 : pcs[2].k > 0 ? 2 : 1; if (pcs[i].k <= 0) break; pcs[i].k--; tot--; }
+  // v35, per map (MAP.dx; not in the legacy Classic world, which must keep matching v18):
+  //   busier hi-hats (8 to 16 a bar), some with ratchets (a hit split into 2 or 3 quick ones)
+  //   kicks and snares on a 3/16 pulse (fixed step patterns instead of the even spread)
+  //   a snare roll into the turn of the pattern, each hit louder than the last
+  const X = world().legacy ? {} : MAP.dx || {};
+  if (X.hatK) pcs[2].k = Math.max(pcs[2].k, solo ? X.hatK : Math.min(X.hatK, 12));
+  if (X.kick316) { pcs[0].k = Math.max(pcs[0].k, 1); pcs[1].k = Math.max(pcs[1].k, 1); }
   const ev = [];
   for (let bar = 0; bar < 2; bar++) pcs.forEach((p, i) => {
     const k = p.k + (bar === 1 && i === 3 && p.k > 0 ? 1 : 0);
     if (!k) return;
-    for (let st = 0; st < 16; st++) if (euclid(k, 16, st, p.rot)) {
+    const fixed = X.kick316 && i < 2 ? (i ? X.snare316 : X.kick316) : null;
+    for (let st = 0; st < 16; st++) if (fixed ? fixed.includes(st) : euclid(k, 16, st, p.rot)) {
       let ph = (bar * 16 + st) / 32;
       if (P.swing && st % 2) ph += P.swing * 0.5 / 32;
-      ev.push({ ph, piece: i, w: p.v * (st % 4 === 0 ? 1 : 0.78), s: list[0], open: i === 2 && hashFrac(MAP.n, bar, st) < MAP.dr.hat.openProb });
+      const busy = i === 2 && X.hatK, w = p.v * (st % 4 === 0 ? 1 : 0.78) * (busy && st % 2 ? 0.55 + 0.4 * hashFrac(MAP.n, st, 67) : 1);
+      ev.push({ ph, piece: i, w, s: list[0], open: i === 2 && hashFrac(MAP.n, bar, st) < MAP.dr.hat.openProb });
+      // Ratchet: now and then a hat is followed at once by one or two quieter ones inside the same sixteenth
+      if (busy && X.ratchet && hashFrac(MAP.n, bar, st, 61) < X.ratchetP) for (let q = 1; q < X.ratchet; q++) ev.push({ ph: ph + q / X.ratchet / 32, piece: 2, w: w * (1 - 0.3 * q), s: list[0], open: false });
     }
   });
+  if (X.roll) {
+    // The roll: thirty-second notes up to the end of the second bar, from quiet to full. In some maps only every other time round.
+    for (let q = 0; q < X.roll; q++) ev.push({ ph: (32 - (X.roll - q) / 2) / 32, piece: 1, w: pcs[1].v * (0.22 + 0.78 * (q + 1) / X.roll), s: list[0], open: false, cyc: X.rollEvery > 1 ? [X.rollEvery, X.rollEvery - 1] : undefined });
+  }
   return { role: 'drums', base: 'beat', period: 8, origin: 0, events: ev };
 }

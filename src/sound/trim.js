@@ -1,0 +1,8 @@
+// Drum level per map (v35). The drum bus's drive, filter and kit differ per map, and the loudness that comes out of
+// them ran from about -29 to -16 dB for the same pattern (measured: every map's kit rendered offline with one standard
+// two-bar pattern, after the drive and filter, before the Level knob). The old compensation inside the drive curve
+// was worked out for one sine at one level, which drum hits are not. This table holds the gain that brings each map's
+// drums to the median (-21.3 dB), limited to 8 dB either way: one character per map, a third of a dB per step.
+// If the kits, the drum bus or the drive curve change, measure again and rebuild the table.
+const T = '5;=A=<QHGIB7N5B<>D?O68DACK<GF6R:KL2OFA=6I:@K:<>L5G<9IE=6?:OC7:NMS6?LKNG8K@3HAB;79OALNNF49>6??GF<EO?;8=<?@F>H677BQL8=I?MGJ78GJUP=8<64EIJ@J>6?B<BBF>8W65S@3K6@43<D3KDIMAB77JGR==O:OK;1988F?IB@?UM;7:P6BO9JDF@;ELI;46L?DJ:=KHH><;@<6B8KN>CS:R8QCJAOJCF7KFE7AHGI=H:IKK5FL26V@A@36;=M8<M@:@0CD568JG<7GMIDO>66E@8:MEFD=@9TF4;DKHK?=534KO6F9HH98FAW;CHLI3S6UKKJ2?98;@8H@AM3M66@=KHE:BO4<?88D3:2OQJ9:A378@6>KI@@KCJ8>CA?3<;@;APHJ>>R6<7I<;AA2WAOKBAS4DCI<L5SN9?4?7KJJ6A96<@D>=:IMDLP38P9GI?>F9C<9:Q<@<8575CC:N<:E:R@@PK>;OREGH?PU>2I4=R;JE2@CG49:J6H5755:O8H8HFM7RS6?B6?8GR6ILMS3K87H9E:5;=>E33HE6?=H6PB?NEE4JJ7E>H6;R:=>Q8<GOM9N8@526NJ5H81EBB>ONOCRC;6=71Q7JNI6III676IF@NE8=NO6<O7P9J@@>:<QND8K:MI7A;8D?9PA99G7A@;OP8;;64>J78;DF@L6S:4?M>78=B@DIF66HHR>4?BLD?PP8PK38@G>:9<F;O>CLGC8><GS;L:K6:=@HARH<=9@DCBH643<F=70J686<<;5:K:@AOK?L7K=;J97=HOQJ8AO68GN48A>OJF449<5:J94C@IBK>AN9>6<E=2?=3NL9>4;E;>P>;OIE;DENGEFKLRBK95JL?37MF>L<=ACK7@9E4NICCA;=8252GG:ML?IJ4>77H@MSGLID2C7J<L8HF8I?R?9@@>=F>;>PKH>B>8457N=I@GOCNJD5FA8E4G8OG77:JN6?1:B>H>F@4:';
+export const drumTrim = n => Math.pow(10, ((T.charCodeAt(n) - 40) / 3 - 8) / 20);

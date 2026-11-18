@@ -8,7 +8,9 @@ import { syncDrones } from './drones.js';
 import { MAP } from './maps.js';
 import { N } from './nodes.js';
 import { scaleMidi } from './pitch.js';
-import { FAMS, MODT } from './vocab.js';
+import { FAMS as FAMS1, FAMS2, MODT } from './vocab.js';
+import { drumTrim } from './trim.js';
+const FAMS = FAMS1.concat(FAMS2);
 
 export let actx = null, noiseBuf = null;
 export const gain = v => { const g = actx.createGain(); g.gain.value = v; return g; };
@@ -77,9 +79,9 @@ export function pitchShifter(semi) {
   return { inp, out };
 }
 
-export function buildAudio() {
+export function buildAudio(ctx) {   // ctx: an offline context, for measuring loudness (tests)
   const AC = window.AudioContext || window.webkitAudioContext;
-  actx = new AC();
+  actx = ctx || new AC(); curves.clear();
   noiseBuf = actx.createBuffer(1, actx.sampleRate * 2, actx.sampleRate);
   { const d = noiseBuf.getChannelData(0), r = mulberry32(99); for (let i = 0; i < d.length; i++) d[i] = r() * 2 - 1; }
   N.master = gain(0);
@@ -125,7 +127,8 @@ export function buildAudio() {
   [vo, wo, fo, N.tremOsc].forEach(o => o.start());
   N.drumVol = gain(1); N.drumVol.connect(N.mix);
   N.drumIn = gain(0.9); N.drumShape = actx.createWaveShaper(); N.drumShape.oversample = '2x'; N.drumFilt = filt('lowpass', 6000);
-  N.drumIn.connect(N.drumShape).connect(N.drumFilt).connect(delay(0.015, 0.1)).connect(N.drumVol);
+  N.drumTrim = gain(1);   // per-map level trim, after the drive (see DRUM_TRIM in sound/trim.js)
+  N.drumIn.connect(N.drumShape).connect(N.drumFilt).connect(delay(0.015, 0.1)).connect(N.drumTrim).connect(N.drumVol);
   N.drumRev = gain(0.14); N.drumVol.connect(N.drumRev).connect(N.revSend);
   N.toneVol = gain(1); N.toneVol.connect(N.melIn);
   N.linesBus = gain(0.7); N.linesBus.connect(N.toneVol);
@@ -188,6 +191,7 @@ export function applyAudio(tc = 0.25) {
   set(N.granSend.gain, A.granular * 0.6); set(N.shimSend.gain, A.shimmer * 0.45); set(N.smearSend.gain, A.smear * 0.55);
   set(N.thinWet.gain, A.thin * 2.2); set(N.thinDry.gain, 1 - A.thin * 0.65);
   set(N.drumFilt.frequency, MAP.dr.busLP);
+  set(N.drumTrim.gain, drumTrim(MAP.n));
   N.drumShape.curve = driveCurve(MAP.dr.drive);
   for (const key in N.mods) {
     const m = ARR.mods.find(x => x.target === key);
