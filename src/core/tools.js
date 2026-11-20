@@ -8,6 +8,9 @@ export const TOOLS = [
   { id: 'ripple', name: 'Ripple', kind: 'drone', icon: '<path d="M3 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0"/>' },
   // Stamps (Geometric): tap to stamp at the size bar's size, or press and drag to set size and turn. stamp: the shape;
   // voice: which tool's instrument plays them (stamps borrow Beads', so maps need no new choices)
+  // Beads (Geometric, v37): drag to lay a run of shapes along the line. Each is an ordinary stamp (its own stroke, kept
+  // under the tool of its shape), so the eraser, undo, clips and the music need nothing new. chain: true marks the tool.
+  { id: 'chain', name: 'Beads', kind: 'static', chain: true, voice: 'beads', icon: '<g fill="currentColor" stroke="none"><circle cx="5.500" cy="17" r="3.200"/><rect x="9.500" y="9.500" width="5.600" height="5.600" transform="rotate(20 12.300 12.300)"/><path d="M19 3.500l3.200 5.600h-6.400z"/></g>'.replace(/(\d)00\b/g, '$1') },
   { id: 'circle', name: 'Circle', kind: 'static', stamp: 'circle', voice: 'beads', icon: '<circle cx="12" cy="12" r="7.5" fill="currentColor" stroke="none"/>' },
   { id: 'square', name: 'Square', kind: 'static', stamp: 'square', voice: 'beads', icon: '<rect x="5" y="5" width="14" height="14" fill="currentColor" stroke="none"/>' },
   { id: 'triangle', name: 'Triangle', kind: 'static', stamp: 'triangle', voice: 'beads', icon: '<path d="M12 4l8.5 15h-17z" fill="currentColor" stroke="none"/>' },

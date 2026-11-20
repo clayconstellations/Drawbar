@@ -8,9 +8,9 @@ export default {
   id: 'materials', name: 'Materials',
   mats: ['Liquid metal', 'Brushed metal', 'Strawberry', 'Clay', 'Wax', 'Rubber', 'Pearl', 'Glass', 'Cloud', 'Slime'],   // shown as Metal, Brushed, Cream, Clay, Wax, Rubber, Pearl, Glass, Cloud, Slime; the colour picker tints them
   colors: ['#aab1ba', '#e2b24a', '#f39bbd', '#f08a5c', '#79c832', '#94ddc6', '#98bff0', '#b79cf0', '#eef1f6'],
-  tools: ['glow', 'beads', 'erase'],
+  tools: ['glow', 'erase'],
   modes: ['free', 'tiles'],
   limits: { strokes: 24, copies: 0, tiles: 4, turns: 1, rotate: true },
   start: { mode: 'free', copies: 2, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Liquid metal' },
-  render: {},
+  render: { smooth: true },   // lines are always smoothed here, whatever the preference: these are meant to be soft, blobby shapes
 };

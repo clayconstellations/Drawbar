@@ -17,6 +17,7 @@ import { accent } from '../worlds/index.js';
 import { switchWorld } from './settings.js';
 import { TABS, WORLDS, world } from '../worlds/index.js';
 import { syncMod } from './modui.js';
+import { applyMidiMute, midi, midiEnable, midiPanic, midiPort } from '../sound/midi.js';
 
 export const mapInput = $('mapInput');
 // The chip in the top bar: map number and tempo, always in view. Tapping it opens the song sheet (map and dice,
@@ -28,7 +29,7 @@ export function setTab(tab) { ui.tab = tab; const a = $('app'); a.classList.togg
 // A wide screen shows both panes, either side of the drawing (the CSS reads the .wide class)
 const wideMq = window.matchMedia('(min-width:700px) and (min-aspect-ratio:5/4)');
 export function placeKnobs() { $('app').classList.toggle('wide', wideMq.matches); }
-let lastTool = 'glow';
+let lastTool = 'glow', wasOn = false;
 export const change = fn => { checkpoint(); fn(); rebuild(); syncUI(); };
 // Preferences
 export const settings = $('settings');
@@ -62,6 +63,8 @@ export function syncSound() {
   const on = playing && !paused;
   $('playBtn').classList.toggle('paused', !on);
   $('playBtn').setAttribute('aria-label', on ? 'Stop' : 'Play');
+  if (!on && midi.on && wasOn) midiPanic();   // stopping: silence anything held over MIDI
+  wasOn = on;
 }
 export function syncUI() {
   const m = score.mode, free = m === 'free', w = world(), L = w.limits;
@@ -250,6 +253,20 @@ export function initControls() {
     $(id).checked = !!prefs[k];
     $(id).addEventListener('change', e => { prefs[k] = e.target.checked; savePrefs(); applyLight(); });
   }
+  // MIDI out
+  { const HELP = 'Voices go out on channels 1 to 4, drones on 5, drums on 10.';
+    const show = msg => {
+      $('prMidi').checked = midi.on; $('prMidiMute').checked = !!prefs.midiMute; $('prMidiClock').checked = !!prefs.midiClock;
+      $('midiPort').innerHTML = midi.outs.map(o => `<option value="${o.id}">${o.name.replace(/[<>&"]/g, '')}</option>`).join('') || '<option value="">None found</option>';
+      $('midiPort').value = prefs.midiPort || ''; $('midiPort').disabled = !midi.on || !midi.outs.length;
+      $('midiNote').textContent = msg || midi.err || HELP;
+    };
+    const turn = async on => { prefs.midi = on; savePrefs(); show(await midiEnable(on, () => show())); };
+    $('prMidi').addEventListener('change', e => turn(e.target.checked));
+    $('midiPort').addEventListener('change', e => { midiPort(e.target.value); show(); });
+    $('prMidiMute').addEventListener('change', e => { prefs.midiMute = e.target.checked; savePrefs(); applyMidiMute(); });
+    $('prMidiClock').addEventListener('change', e => { prefs.midiClock = e.target.checked; savePrefs(); });
+    show(); if (prefs.midi) turn(true); }
   $('prGlide').addEventListener('input', e => { prefs.glide = +e.target.value; showGlide(); savePrefs(); });
   showGlide();
   $('shapeSeg').addEventListener('click', e => { const v = e.target.closest('button')?.dataset.v; if (v) { prefs.shape = v; savePrefs(); applyView(); } });

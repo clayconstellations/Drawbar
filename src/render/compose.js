@@ -376,10 +376,11 @@ export function drawAnim(X, s, S, B) {
   return centerPath(rx, ry, 0, n - 1, 4);
 }
 export function drawPreview(X, S, B, now) {
+  if (cur && cur.chain) return;   // Geometric Beads: each shape is already in the drawing as it is laid
   if (cur && cur.stamp) {
     // A stamp being placed: the real shape, a little see-through, in every copy
     const sh = stampShape(cur.stamp, stampPts(cur.stamp, cur.cx, cur.cy, cur.r, cur.rot)), r = cur.r + 0.03;
-    X.fillStyle = colorOf(cur); X.globalAlpha = 0.8;
+    X.fillStyle = colorOf(cur); X.globalAlpha = 1;   // opaque while placing, as it will be (v37)
     forCopies(X, () => X.fill(sh.paths[1]), { _bb: [cur.cx - r, cur.cy - r, cur.cx + r, cur.cy + r] });
     X.globalAlpha = 1;
     return;

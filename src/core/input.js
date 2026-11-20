@@ -3,7 +3,7 @@ import { eraseTester, fs, tiled } from '../canvas/index.js';
 import { isVisual } from './layout.js';
 import { rebuild, strokeAdded } from './settings.js';
 import { checkpoint, prefs, redoStack, score, takeId, ui, undoStack } from './state.js';
-import { prepare, smoothStroke } from './stroke.js';
+import { prepare, smoothStroke, speedN } from './stroke.js';
 import { TOOL, brushSize, stampRadius } from './tools.js';
 import { clamp } from './math.js';
 import { stampPts } from '../render/stamps.js';
@@ -32,7 +32,7 @@ export function unrot(v) {
 export const pressureOf = e => e.pointerType === 'pen' ? (e.pressure || 0.5) : 0.5;
 export function addPoint(e) {
   const p = unrot(toScreen(e)), t = Math.max(e.timeStamp / 1000 - cur.t0, cur.pts[cur.pts.length - 1][2]);
-  { const k = prefs.smooth === false ? 1 : 0.25; cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
+  { const k = prefs.smooth === false && !world().render.smooth ? 1 : 0.25; cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
   const last = cur.pts[cur.pts.length - 1];
   if (Math.hypot(cur.sx - last[0], cur.sy - last[1]) > 0.003) cur.pts.push([cur.sx, cur.sy, t, pressureOf(e)]);
 }
@@ -73,11 +73,12 @@ export function finishStroke(e) {
     erasing = null; rebuild(undefined, true); syncUI(); return;
   }
   if (!cur || e.pointerId !== cur.id) return;
+  if (cur.chain) { cur = null; syncUI(); return; }
   if (cur.stamp) { finishStamp(); return; }
   const p = unrot(toScreen(e)), last = cur.pts[cur.pts.length - 1];
   const t = Math.max(e.timeStamp / 1000 - cur.t0, last[2]);
   if (Math.hypot(p.x - last[0], p.y - last[1]) > 0.002) cur.pts.push([p.x, p.y, t, pressureOf(e)]);
-  const pts = cur.pts.length > 2 && prefs.smooth !== false ? smoothStroke(cur.pts, cur.size) : cur.pts;
+  const pts = cur.pts.length > 2 && (prefs.smooth !== false || world().render.smooth) ? smoothStroke(cur.pts, cur.size) : cur.pts;
   const S = sessionNow();
   const s = { id: cur.sid, tool: TOOL[cur.tool].as || cur.tool, head: cur.tool === 'trace' || undefined, pt: cur.pt, color: cur.color, size: cur.size, fx: MATS[cur.color].live ? score.fx : undefined, tint: cur.tint, pts, start: S, startBeat: Math.round(beatAt(S) * 4) / 4 };
   cur = null;
@@ -85,6 +86,15 @@ export function finishStroke(e) {
   checkpoint();
   score.strokes.push(s);
   strokeAdded(s); syncUI();
+}
+// One bead of a run: what the hand was doing there decides it. Slow gives round and large, faster gives more
+// corners and smaller (circle, hexagon, square, triangle, star); it is turned to face along the line. Nothing random.
+const BEADS = ['circle', 'hexagon', 'square', 'triangle', 'star'];
+function layBead(p, speed, rot) {
+  const v = speedN(speed), shape = BEADS[Math.min(4, Math.floor(v * 5.5))], r = Math.max(0.012, cur.r0 * (1.5 - 0.9 * v)), S = sessionNow();
+  const s = { id: takeId(), tool: shape, color: cur.color, size: clamp(r * 40, 1.5, 24), pts: stampPts(shape, p.x, p.y, r, rot), start: S, startBeat: Math.round(beatAt(S) * 4) / 4 };
+  prepare(s); score.strokes.push(s); strokeAdded(s);
+  cur.r = r; cur.k++;
 }
 function finishStamp() {
   const S = sessionNow();
@@ -105,6 +115,11 @@ export function initInput() {
       erasing = { id: e.pointerId, p, screen: sc, touched: false, redo: redoStack.slice() };
       checkpoint();
       eraseAt(p);
+    } else if (TOOL[ui.tool].chain) {
+      // Beads (Geometric): shapes are laid along the line as it is drawn. One undo step for the whole run.
+      checkpoint();
+      cur = { id: e.pointerId, chain: true, tool: ui.tool, color: ui.color, r0: stampRadius(ui.brushV) / fs(), lx: p.x, ly: p.y, lt: e.timeStamp / 1000, r: 0, k: 0, pts: [] };
+      layBead(p, 0, -Math.PI / 2);
     } else if (TOOL[ui.tool].stamp) {
       // Stamp: a tap places it at the size bar's size; dragging sets its size and turns it to point at the finger
       cur = { id: e.pointerId, stamp: TOOL[ui.tool].stamp, tool: ui.tool, color: ui.color, cx: p.x, cy: p.y, r: stampRadius(ui.brushV) / fs(), rot: -Math.PI / 2, moved: false, pts: [] };
@@ -112,7 +127,15 @@ export function initInput() {
     e.preventDefault();
   });
   cv.addEventListener('pointermove', e => {
-    if (cur && cur.stamp && e.pointerId === cur.id) {
+    if (cur && cur.chain && e.pointerId === cur.id) {
+      const list = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (const ev of (list.length ? list : [e])) {
+        const p = unrot(toScreen(ev)), d = Math.hypot(p.x - cur.lx, p.y - cur.ly), t = ev.timeStamp / 1000;
+        if (d < cur.r * 2.15 + cur.r0 * 0.5) continue;   // far enough from the last one that they just clear each other
+        layBead(p, d / Math.max(t - cur.lt, 0.008), Math.atan2(p.y - cur.ly, p.x - cur.lx));
+        cur.lx = p.x; cur.ly = p.y; cur.lt = t;
+      }
+    } else if (cur && cur.stamp && e.pointerId === cur.id) {
       const p = unrot(toScreen(e)), d = Math.hypot(p.x - cur.cx, p.y - cur.cy);
       if (d > 0.012) cur.moved = true;
       if (cur.moved) { cur.r = Math.max(d, 0.012); cur.rot = Math.atan2(p.y - cur.cy, p.x - cur.cx); }

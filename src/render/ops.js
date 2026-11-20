@@ -81,8 +81,35 @@ export function localLight(c) {
   return [vx / h, vy / h];
 }
 export const BIG = 9000;
-let rimC = null, rimX = null;
+let rimC = null, rimX = null, partC = null, partX = null;
 export function drawShape(c, sh, ops) {
+  if (sh.parts) {
+    // A stroke that crosses itself, kept as overlapping pieces in drawing order. Its shadow is drawn once for the
+    // whole shape; then each piece, ink and body, clipped to the band it owns. A later piece crossing an earlier one
+    // therefore lies on top of it, outline and all, like one tube passing over another.
+    const whole = { ...sh, parts: null }, drop = ops.filter(o => o.t === 'drop'), rest = ops.filter(o => o.t !== 'drop');
+    if (drop.length) drawShape(c, whole, drop);
+    // Each piece is drawn whole on a spare canvas and then cut to its band in one go. (Clipping while drawing would
+    // leave a hairline at every join: each layer's soft clip edge lets the darker layers beneath show through.)
+    const m = c.getTransform(), b = sh.bb; let x0 = 0, y0 = 0, x1 = c.canvas.width, y1 = c.canvas.height;
+    if (b) {
+      let ax = 1e9, ay = 1e9, bx = -1e9, by = -1e9;
+      for (const [x, y] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) { const px = m.a * x + m.c * y + m.e, py = m.b * x + m.d * y + m.f; ax = Math.min(ax, px); bx = Math.max(bx, px); ay = Math.min(ay, py); by = Math.max(by, py); }
+      const pad = 0.06 * Math.sqrt(Math.abs(m.a * m.d - m.b * m.c));
+      x0 = Math.max(x0, Math.floor(ax - pad)); y0 = Math.max(y0, Math.floor(ay - pad)); x1 = Math.min(x1, Math.ceil(bx + pad)); y1 = Math.min(y1, Math.ceil(by + pad));
+    }
+    const w = x1 - x0, h = y1 - y0; if (w < 1 || h < 1) return;
+    if (!partC) { partC = document.createElement('canvas'); partX = partC.getContext('2d'); }
+    if (partC.width < w || partC.height < h) { partC.width = Math.max(partC.width, w); partC.height = Math.max(partC.height, h); }
+    for (const p of sh.parts) {
+      partX.setTransform(1, 0, 0, 1, 0, 0); partX.globalCompositeOperation = 'source-over'; partX.globalAlpha = 1; partX.clearRect(0, 0, w, h);
+      partX.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
+      drawShape(partX, p, rest);
+      partX.globalCompositeOperation = 'destination-in'; partX.globalAlpha = 1; partX.fillStyle = '#000'; partX.fill(p.band);
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(partC, 0, 0, w, h, x0, y0, w, h); c.restore();
+    }
+    return;
+  }
   const [lx, ly] = localLight(c), w0 = sh.w0;
   let far = null, scale = 1;
   for (const o of ops) {

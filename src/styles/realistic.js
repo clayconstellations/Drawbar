@@ -5,7 +5,7 @@ import { F, S, CLIP, END, SOFTDROP } from '../render/ops.js';
 // For lines: soft bands that follow the line, so it reads as a rounded tube
 export const metal = () => [SOFTDROP(0.5), F(1, '#949ca8'), CLIP, S(1, '#2c3138', 0.12, 0.35), S(0.86, '#727a86', 0.2, 0.5), S(0.62, '#bcc3cb', 0.3, 0.45), S(0.4, '#e2e5e9', 0.38, 0.4, 0.9), S(0.28, '#2a2f36', -0.2, 0.3, 0.45), S(0.2, '#f5f6f8', 0.46, 0.4, 0.75), END];
 export const cream = c => () => [SOFTDROP(0.35), F(1, tint(c, 0.12)), CLIP, S(1, shade(c, 0.3), 0.1, 0.35), S(0.9, shade(c, 0.12), 0.18, 0.5), S(0.68, c, 0.27, 0.5), S(0.45, tint(c, 0.18), 0.36, 0.45), S(0.25, tint(c, 0.38), 0.45, 0.4, 0.65), END];
-export const slime = () => [SOFTDROP(0.4), F(1, '#2f6b12'), CLIP, S(1, '#4f9a1a', 0.1, 0.4), S(0.85, '#79c832', 0.2, 0.5), S(0.6, '#a8e05a', 0.3, 0.45), F('bub', '#c8f28e', 0, 0.6), F('bubHi', '#ffffff', 0, 0.85), S(0.3, '#e9ffd0', 0.4, 0.35, 0.8), F(0.1, '#ffffff', 0.58, 0.9), END];
+export const slime = () => [SOFTDROP(0.4), F(1, '#2f6b12'), CLIP, S(1, '#4f9a1a', 0.1, 0.4), S(0.85, '#79c832', 0.2, 0.5), S(0.6, '#a8e05a', 0.3, 0.45), F('bub', '#c8f28e', 0, 0.6), F('bubHi', '#ffffff', 0, 0.85), S(0.3, '#e9ffd0', 0.4, 0.35, 0.8), S('hi', '#ffffff', 0.5, 0.12, 0.9), END];
 export const softPuffs = (dark, a, b, c2, hi) => () => [SOFTDROP(0.3), F(1, dark), CLIP, S(1, a, 0.12, 0.5), S(1, b, 0.32, 0.6), S(1, c2, 0.58, 0.6), S(1, hi, 0.85, 0.5, 0.8), END];
 
 export const liquidMetal = { name: 'Liquid metal', accent: '#c9ced6', glow: '#b9c6da', glowA: 0.12, make: metal,
@@ -20,7 +20,7 @@ export const slimeMat = { name: 'Slime', accent: '#79c832', glow: '#a8e05a', glo
 
 // ----- Brush and colour picked separately in the Materials style (v28). One colour in, the whole material out.
 const metalT = c => [SOFTDROP(0.5), F(1, shade(c, 0.3)), CLIP, S(1, shade(c, 0.8), 0.12, 0.35), S(0.86, shade(c, 0.45), 0.2, 0.5), S(0.62, tint(c, 0.3), 0.3, 0.45), S(0.4, tint(c, 0.65), 0.38, 0.4, 0.9), S(0.28, shade(c, 0.82), -0.2, 0.3, 0.45), S(0.2, tint(c, 0.9), 0.46, 0.4, 0.75), END];
-const slimeT = c => [SOFTDROP(0.4), F(1, shade(c, 0.6)), CLIP, S(1, shade(c, 0.25), 0.1, 0.4), S(0.85, c, 0.2, 0.5), S(0.6, tint(c, 0.3), 0.3, 0.45), F('bub', tint(c, 0.5), 0, 0.6), F('bubHi', '#ffffff', 0, 0.85), S(0.3, tint(c, 0.8), 0.4, 0.35, 0.8), F(0.1, '#ffffff', 0.58, 0.9), END];
+const slimeT = c => [SOFTDROP(0.4), F(1, shade(c, 0.6)), CLIP, S(1, shade(c, 0.25), 0.1, 0.4), S(0.85, c, 0.2, 0.5), S(0.6, tint(c, 0.3), 0.3, 0.45), F('bub', tint(c, 0.5), 0, 0.6), F('bubHi', '#ffffff', 0, 0.85), S(0.3, tint(c, 0.8), 0.4, 0.35, 0.8), S('hi', '#ffffff', 0.5, 0.12, 0.9), END];
 const cloudT = c => softPuffs(shade(c, 0.32), tint(c, 0.1), tint(c, 0.45), tint(c, 0.78), '#ffffff')();
 const ball = (c, a, b) => `radial-gradient(circle at 36% 32%, ${a} 0 8%, ${c} 46%, ${b} 100%)`;
 liquidMetal.label = 'Metal'; liquidMetal.tintOps = metalT;
@@ -38,7 +38,7 @@ export const clay = { name: 'Clay', label: 'Clay', accent: '#d98a5f', glow: '#d9
 // hard edge it read as a smudge), a soft shadow side and two hard glints. 2 blurred layers. Hides nothing beneath it.
 const RIM = (k0, k, c, a = 1) => ({ t: 'rim', k0, k, c, a });
 const glassT = c => [SOFTDROP(0.22), F(1, c, 0, 0.2), CLIP, S(1, shade(c, 0.55), -0.34, 0.3, 0.5), S(0.5, tint(c, 0.7), 0.5, 0.35, 0.55),
-  RIM(1, 0.86, shade(c, 0.62), 0.9), RIM(0.86, 0.78, tint(c, 0.85), 0.55), F(0.13, '#ffffff', 0.58, 0.95), F(0.07, '#ffffff', -0.46, 0.5), END];
+  RIM(1, 0.86, shade(c, 0.62), 0.9), RIM(0.86, 0.78, tint(c, 0.85), 0.55), S('hi', '#ffffff', 0.5, 0.12, 0.95), S('hi', '#ffffff', -0.42, 0.12, 0.4), END];
 export const glass = { name: 'Glass', label: 'Glass', accent: '#9fd8ee', glow: '#9fd8ee', glowA: 0.1, make: () => glassT('#9fd8ee'), tintOps: glassT, clear: true,
   swatch: '#9fd8ee', swatchFor: c => `radial-gradient(circle at 34% 30%, #fff 0 7%, transparent 9%), radial-gradient(circle at 66% 70%, rgba(255,255,255,.5) 0 5%, transparent 7%), radial-gradient(circle, ${c}44 0 52%, ${tint(c, 0.85)} 54% 60%, ${shade(c, 0.62)} 62% 100%)` };
 // ----- v29: four more, none dearer than Cream (5 blurred layers)
@@ -58,3 +58,5 @@ export const wax = more('Wax', 'Wax', '#f7da7a', waxT, c => `radial-gradient(cir
 export const pearl = more('Pearl', 'Pearl', '#eef1f6', pearlT, c => `radial-gradient(circle at 36% 32%, #fff 0 9%, #c2ecff 30%, ${tint(c, 0.66)} 52%, #f3bfd9 76%, ${shade(tint(c, 0.66), 0.4)} 100%)`);
 export const brushed = more('Brushed metal', 'Brushed', '#e2b24a', brushedT, c => `repeating-linear-gradient(100deg, rgba(255,255,255,.2) 0 1px, rgba(0,0,0,.2) 1px 2px, transparent 2px 3px), linear-gradient(190deg, ${tint(c, 0.45)}, ${shade(c, 0.5)})`);
 export const rubber = more('Rubber', 'Rubber', '#f08a5c', rubberT, c => `radial-gradient(circle at 36% 32%, ${shade(c, 0.1)} 0 7%, ${shade(c, 0.4)} 34%, ${shade(c, 0.74)} 100%)`);
+// Soft highlights on their own smoothed path (v37), as in Comic: Glass and Slime had hard white bands
+glass.hi = 0.11; slimeMat.hi = 0.09;

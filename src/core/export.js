@@ -10,7 +10,11 @@ import { N } from '../sound/nodes.js';
 export let downloadsCap, downloadsReady;
 export async function saveFile(name, blob) {
   const d = await downloadsReady;
-  if (!d) { toast('Saving files is not available in this view'); return; }
+  if (!d) {   // outside claude.ai: an ordinary browser download
+    try { const a = document.createElement('a'), url = URL.createObjectURL(blob); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000); }
+    catch (e) { toast('Saving files is not available in this view'); }
+    return;
+  }
   try { await d.save({ filename: name, data: blob }); }
   catch (e) {
     const code = e && e.code;

@@ -21,7 +21,7 @@
   <header class="top" id="topArea">
     <div class="bar1">
       <div class="brand">Drawbar</div>
-      <button id="songBtn" class="songchip" aria-haspopup="true" aria-expanded="false" aria-controls="songSheet" aria-label="Map, tempo, key and scale" title="Map, tempo, key and scale"><span id="chipMap">417</span><i></i><span id="chipBpm">92</span><small>BPM</small></button>
+      <button id="songBtn" class="songchip" aria-haspopup="true" aria-expanded="false" aria-controls="songSheet" aria-label="Map, tempo, key and scale" title="Map, tempo, key and scale"><small class="pre">MAP</small><span id="chipMap">417</span><i></i><span id="chipBpm">92</span><small>BPM</small></button>
       <button id="dice" class="icon" aria-label="Randomize" title="Randomize">  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg></button>
       <span class="grow"></span>
       <button id="undoBtn" class="icon" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
@@ -106,6 +106,12 @@
   <div class="seg" id="instSeg" role="group" aria-label="Instruments"><button id="inst-tones" data-v="tones">Tones</button><button id="inst-drums" data-v="drums">Drums</button><button id="inst-both" data-v="both">Both</button></div>
   <h3>Level</h3>
   <div class="vrow vols"><div class="kwrap"><div class="kn" id="volTones" role="slider" tabindex="0" aria-label="Tones volume" aria-valuemin="0" aria-valuemax="100"></div><span class="kl">Tones</span></div><div class="kwrap"><div class="kn" id="volDrums" role="slider" tabindex="0" aria-label="Drums volume" aria-valuemin="0" aria-valuemax="100"></div><span class="kl">Drums</span></div></div>
+  <h3>MIDI out</h3>
+  <label class="srow" for="prMidi">Send MIDI<span class="switch"><input type="checkbox" id="prMidi"><span></span></span></label>
+  <div class="srow">Port<select id="midiPort" class="pick" aria-label="MIDI port"></select></div>
+  <label class="srow" for="prMidiMute">Mute the built-in sound<span class="switch"><input type="checkbox" id="prMidiMute"><span></span></span></label>
+  <label class="srow" for="prMidiClock">Send clock<span class="switch"><input type="checkbox" id="prMidiClock"><span></span></span></label>
+  <p class="midinote" id="midiNote">Voices go out on channels 1 to 4, drones on 5, drums on 10.</p>
   <h3>Randomize includes</h3>
   <label class="srow" for="prTempo">Tempo<span class="switch"><input type="checkbox" id="prTempo"><span></span></span></label>
   <label class="srow" for="prMode">Pattern type<span class="switch"><input type="checkbox" id="prMode"><span></span></span></label>

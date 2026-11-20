@@ -9,6 +9,7 @@ import { MAP } from './maps.js';
 import { N } from './nodes.js';
 import { scaleMidi } from './pitch.js';
 import { FAMS as FAMS1, FAMS2, MODT } from './vocab.js';
+import { applyMidiMute } from './midi.js';
 const FAMS = FAMS1.concat(FAMS2);
 
 export let actx = null, noiseBuf = null;
@@ -247,7 +248,7 @@ export function applyAudio(tc = 0.25) {
     if (key === 'delay.fb') depth = Math.max(0, Math.min(depth, 0.86 - Math.min(dFb * 1.45, 0.8)));
     set(N.mods[key].g.gain, depth);
   }
-  applyVibe(tc);
+  applyVibe(tc); applyMidiMute();
   applyTempoParams(tc); applyTone(tc === 0.25 ? undefined : tc); applySpace(); applyVolumes();
   syncDrones(tc); retuneThin(t);
 }

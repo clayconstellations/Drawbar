@@ -220,3 +220,30 @@ export function dabPath(x, y, rr, seed) {
   }
   return P;
 }
+// A highlight's path: a slim ribbon down the middle of the stroke, on a centre line smoothed over several points
+// (whatever the app's line smoothing), kept back from both tips and tapering to nothing at its ends, so it never
+// reads as a drawn line or reaches the outline. hw: its half-width as a share of the stroke's. i0, i1: the stretch of
+// the stroke to cover; endA / endB: whether that stretch ends at a real tip (hold back) or just at a cut (run through).
+export function hiPath(xs, ys, w, L, i0, i1, hw, endA = true, endB = true) {
+  const P = new Path2D(), n = i1 - i0 + 1;
+  if (n < 2) return P;
+  const wm = w[Math.floor((i0 + i1) / 2)], a = L[i0] + (endA ? wm * 1.5 : 0), b = L[i1] - (endB ? wm * 1.5 : 0);
+  if (b - a < wm * 0.8) { const m = Math.floor((i0 + i1) / 2); P.ellipse(xs[m], ys[m], wm * hw * 1.6, wm * hw, Math.atan2(ys[i1] - ys[i0], xs[i1] - xs[i0]), 0, TAU); return P; }
+  const K = 4, lx = [], ly = [], rx = [], ry = [];
+  for (let i = i0; i <= i1; i++) {
+    if (L[i] < a || L[i] > b) continue;
+    let sx = 0, sy = 0, c = 0;
+    for (let q = Math.max(i0, i - K); q <= Math.min(i1, i + K); q++) { sx += xs[q]; sy += ys[q]; c++; }
+    const p = Math.max(i0, i - K), nx2 = Math.min(i1, i + K), dx = xs[nx2] - xs[p], dy = ys[nx2] - ys[p], d = Math.hypot(dx, dy) || 1;
+    const u = (L[i] - a) / (b - a), h = w[i] * hw * Math.pow(Math.sin(Math.PI * Math.min(Math.max(u * (endA ? 1 : 0.5) + (endA ? 0 : 0.5), 0), endB ? 1 : 0.5)), 0.6);
+    lx.push(sx / c - dy / d * h); ly.push(sy / c + dx / d * h); rx.push(sx / c + dy / d * h); ry.push(sy / c - dx / d * h);
+  }
+  if (lx.length < 2) return P;
+  P.moveTo(lx[0], ly[0]); for (let q = 1; q < lx.length; q++) P.lineTo(lx[q], ly[q]); for (let q = rx.length - 1; q >= 0; q--) P.lineTo(rx[q], ry[q]); P.closePath();
+  return P;
+}
+// Does the line cross or lie over itself? (two points well apart along it, close together on the page)
+export function selfCross(xs, ys, w, L, n) {
+  for (let i = 0; i < n; i += 2) for (let j = i + 6; j < n; j += 2) if (L[j] - L[i] > 2.5 * (w[i] + w[j]) && Math.hypot(xs[i] - xs[j], ys[i] - ys[j]) < 0.9 * (w[i] + w[j])) return true;
+  return false;
+}

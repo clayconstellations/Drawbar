@@ -1,6 +1,6 @@
 // Stroke geometry: smoothing, and all per-stroke derived data (the _ prefixed fields) made by prepare(s)
 import { TAU, clamp, hash32, mod, mulberry32 } from './math.js';
-import { buildShape, capsAlong, cloudPuffs, dabPath, dripsFor, extraPieces, geoChain } from '../render/shapes.js';
+import { buildShape, capsAlong, cloudPuffs, dabPath, dripsFor, extraPieces, geoChain, hiPath, selfCross } from '../render/shapes.js';
 import { MATS } from '../styles/index.js';
 import { TOOL } from './tools.js';
 import { glyphCells, glyphShape, lineSamples } from '../render/glyphs.js';
@@ -110,7 +110,7 @@ export function prepare(s) {
       const pieces = growPlant(M.plant, M.keys, s.id, { xs, ys, nx, ny, w, L, n, w0 });
       s._shape = { paths: { ...pieces, 1: pieces.all }, w0: w0 * 0.9, wd: w0 * 0.9, ink: null };
     } else if (s.tool === 'glow') {
-      let caps = capsAlong(xs, ys, w, 0, n - 1, 2), circ = [], inkCaps = null;
+      let caps = capsAlong(xs, ys, w, 0, n - 1, 2), circ = [], inkCaps = null, inkOf = null;
       if (M.extra === 'slime') {
         // Slime: lumpy, swelling and thinning along its length
         const rr = mulberry32(hash32(s.id, 17)), p1 = rr() * TAU, p2 = rr() * TAU, ws = new Float32Array(n);
@@ -125,7 +125,8 @@ export function prepare(s) {
         // Comic ink swells and thins a little along the line, like a brush pen, but never vanishes at the tips
         const rr = mulberry32(hash32(s.id, 33)), p1 = rr() * TAU, p2 = rr() * TAU;
         const iw = M.extra === 'vine' ? 0.4 : M.inkW || 1;
-        inkCaps = caps.map(([ax, ay, ar, bx, by, br], i) => { const t = L[Math.min(i * 2, n - 1)] / w0; return [ax, ay, ar + iw * w0 * (0.26 + 0.08 * Math.sin(t / 2.4 + p1) + 0.04 * Math.sin(t / 0.9 + p2)), bx, by, br + iw * w0 * (0.26 + 0.08 * Math.sin(t / 2.4 + p1) + 0.04 * Math.sin(t / 0.9 + p2))]; });
+        inkOf = (cs, a0) => cs.map(([ax, ay, ar, bx, by, br], i) => { const t = L[Math.min(a0 + i * 2, n - 1)] / w0; return [ax, ay, ar + iw * w0 * (0.26 + 0.08 * Math.sin(t / 2.4 + p1) + 0.04 * Math.sin(t / 0.9 + p2)), bx, by, br + iw * w0 * (0.26 + 0.08 * Math.sin(t / 2.4 + p1) + 0.04 * Math.sin(t / 0.9 + p2))]; });
+        inkCaps = inkOf(caps, 0);
       }
       if (M.drip) {
         const pts = []; for (let i = 0; i < n; i += 2) pts.push([xs[i], ys[i], w[i]]);
@@ -139,6 +140,33 @@ export function prepare(s) {
       if (M.clear) s._shape.noHide = true;   // see-through: covers nothing
       s._shape.bb = s._bb;
       if (M.extra === 'bristle') s._shape.noHide = true;   // a dry brush covers nothing fully
+      if (M.hi) s._shape.paths.hi = hiPath(xs, ys, w, L, 0, n - 1, M.hi);
+      // Comic tubes (v37): where a comic stroke crosses or lies over itself it is also kept as a run of overlapping
+      // pieces, drawn in order (see drawShape), so the later part passes over the earlier one with its own outline
+      // instead of the two melting into one blob. Only strokes that do cross pay for this.
+      if (inkOf && !M.puffs && !M.drip && n > 12 && selfCross(xs, ys, w, L, n)) {
+        const cl = Math.max(w0 * 5, s._len / 14), parts = [], reach = w0 * 3;
+        for (let a0 = 0; a0 < n - 1;) {
+          let b0 = a0 + 2; while (b0 < n - 1 && L[b0] - L[a0] < cl) b0 += 2;
+          b0 = Math.min(b0, n - 1); if (n - 1 - b0 < 3) b0 = n - 1;
+          // The piece is built well past both ends of the stretch it owns, and drawn clipped to a band across that
+          // stretch (square-ended, a little wider than the tube and its ink), so its round ends never show: pieces
+          // meet along straight cuts with the same shading either side.
+          let from = a0, to = b0; while (from > 0 && L[a0] - L[from] < reach) from--; while (to < n - 1 && L[to] - L[b0] < reach) to++;
+          from -= from % 2;
+          const pc = capsAlong(xs, ys, w, from, to, 2), part = buildShape(pc, [], M.ks, w0 * 0.9, inkT, inkOf(pc, from));
+          if (M.hi) part.paths.hi = hiPath(xs, ys, w, L, from, to, M.hi, from === 0, to === n - 1);
+          const band = new Path2D(), c0 = Math.max(0, a0 - 1), half = i => w[i] * 1.8 + inkT * 2 + w0 * 0.3, lft = [], rgt = [];
+          const push = (x, y, i) => { const h = half(i); lft.push([x + nx[i] * h, y + ny[i] * h]); rgt.push([x - nx[i] * h, y - ny[i] * h]); };
+          if (a0 === 0) push(xs[0] - ny[0] * w0 * 4, ys[0] + nx[0] * w0 * 4, 0);   // out past the first tip (the line runs along (ny, -nx))
+          for (let q = c0; q <= b0; q++) push(xs[q], ys[q], q);
+          if (b0 === n - 1) push(xs[b0] + ny[b0] * w0 * 4, ys[b0] - nx[b0] * w0 * 4, b0);   // and past the last
+          band.moveTo(lft[0][0], lft[0][1]); for (let q = 1; q < lft.length; q++) band.lineTo(lft[q][0], lft[q][1]); for (let q = rgt.length - 1; q >= 0; q--) band.lineTo(rgt[q][0], rgt[q][1]); band.closePath();
+          part.band = band; part.bb = s._bb; parts.push(part);
+          a0 = b0;
+        }
+        if (parts.length > 1) s._shape.parts = parts;
+      }
     }
   } else {
     // Space beads along the line, then stretch the spacing so the last bead lands on the end

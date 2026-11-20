@@ -2,7 +2,7 @@
 // with one image copy per stamp. Stars twinkle through a small per-frame overlay on a few stars per stroke.
 import { TAU, mulberry32, hash32 } from '../core/math.js';
 import { hexRgb } from '../core/color.js';
-import { forCopies } from '../canvas/index.js';
+import { forCopies, fs } from '../canvas/index.js';
 
 const SZ = 128, sprites = new Map();
 function make(key, paint) {
@@ -277,7 +277,7 @@ export function drawFilm(ctx, W, H, now, still) {
     for (let i = 0; i < d.length; i += 4) { const v = r(), lum = v < 0.5 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = lum; d[i + 3] = Math.floor(Math.pow(Math.abs(v - 0.5) * 2, 2.2) * 34); }
     g.putImageData(im, 0, 0);
   }
-  const pat = ctx.createPattern(grain, 'repeat'), sc = Math.max(1, Math.round(Math.max(W, H) / 700));
+  const pat = ctx.createPattern(grain, 'repeat'), sc = Math.max(1, Math.round(Math.max(W, H) / 700)) * fs();   // the grain grows and shrinks with Size, like the picture
   pat.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0]));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);

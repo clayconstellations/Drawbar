@@ -10,7 +10,7 @@ export const modBase = {};
 export const gv = k => k in modBase ? modBase[k] : score[k];
 export const sv = (k, v) => { if (k in modBase) modBase[k] = v; else score[k] = v; };
 export const ui = { tool: 'glow', color: 1, brushV: 50, eraseV: 45, tint: '#ee3b3f', opts: {}, tab: 'draw', modKey: 'density' };   // opts: brush options in hand, per kind of brush (brushopts.js)
-export const prefs = { rTempo: true, rMode: false, rFolds: true, glide: 1200, shape: 'circle', volTones: 80, volDrums: 80, world: 'paint', smooth: false, light: false };
+export const prefs = { rTempo: true, rMode: false, rFolds: true, glide: 1200, shape: 'circle', volTones: 80, volDrums: 80, world: 'paint', smooth: false, light: false, midi: false, midiPort: '', midiMute: false, midiClock: false };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('visual-score-prefs') || '{}')); } catch (e) {}
 // Line smoothing is off by default since v34 (once, for everyone; it can be turned back on in Preferences)
 if (!prefs.smooth34) { prefs.smooth34 = true; prefs.smooth = false; }

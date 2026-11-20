@@ -98,7 +98,7 @@ function assignVoices(lanes) {
       for (let i = 0; i < 7; i++) sc += W[i] * (f[i] - 0.4) * 0.9;
       if (sc > top) { top = sc; best = v; }
     }
-    ev.inst = MAP.voices[best];
+    ev.inst = MAP.voices[best]; ev.vi = best;
   }
 }
 export function arrange() {

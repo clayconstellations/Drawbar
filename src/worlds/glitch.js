@@ -14,5 +14,5 @@ export default {
   limits: { strokes: 16, copies: 0, tiles: 3, turns: 1, rotate: false },   // turns: 1 or 2 (v31; 2 doubles what is drawn each frame)
   start: { mode: 'free', copies: 2, spiral: 0, tiles: 3, turns: 0, mirror: false, fscale: 50, frot: false, fmirror: false, fx: 'smear', tool: 'glow', color: 'Solids' },
   options: { fx: true },
-  render: { grid: true },
+  render: {},   // (the faint code grid in the background was removed in v37)
 };

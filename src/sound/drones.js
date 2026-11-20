@@ -8,12 +8,14 @@ import { strokeWave } from './instruments.js';
 import { MAP } from './maps.js';
 import { N } from './nodes.js';
 import { scaleMidi } from './pitch.js';
+import { midiDrones } from './midi.js';
 
 export const drones = new Map();
 export function droneFreq(s) { const L = MAP.scale.length, cm = MAP.colorMod[toneIdx(s) % 7]; let f = mtof(scaleMidi(Math.round((MAP.invert ? 1 - s._hm : s._hm) * MAP.span) + cm.deg - L, MAP.low)); while (f > 400) f /= 2; while (f < 50) f *= 2; return f; }
 export function syncDrones(tc = 0.4) {
   if (!audioReady) return;
   const t = actx.currentTime, want = ARR.drones, ids = new Set(want.map(s => s.id));
+  midiDrones(want.map(s => [s.id, droneFreq(s)]));
   for (const [id, d] of drones) if (!ids.has(id)) {
     d.fader.gain.cancelScheduledValues(t); d.fader.gain.setTargetAtTime(0, t, 0.5);
     [d.o1, d.o2, d.lfo].forEach(o => o.stop(t + 3));

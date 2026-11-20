@@ -12,13 +12,14 @@ import { N } from './nodes.js';
 import { lineNote } from './pitch.js';
 import { TOOL } from '../core/tools.js';
 import { notePulse } from './pulse.js';
+import { midiClock, midiDrum, midiKnobs, midiNote } from './midi.js';
 
 export function playEvent(lane, ev, S) {
   const at = S + pausedTotal - audioOffset;
   if (at < actx.currentTime - 0.02) return;
   const t = Math.max(at, actx.currentTime);
   notePulse(S, ev.w, lane.role === 'drums', ev.s && ev.s.id);   // for visuals that react to the music
-  if (lane.role === 'drums') { drumHit(ev.piece, t, ev.w, ev.open); return; }
+  if (lane.role === 'drums') { midiDrum(ev.piece, t, ev.w, ev.open); drumHit(ev.piece, t, ev.w, ev.open); return; }
   const pSec = lane.base === 'beat' ? lane.period * 60 / score.tempo : lane.period;
   const dur = clamp((ev.len || 0.1) * pSec, 0.08, 3);
   const inst = ev.inst || MAP.lineInst[(TOOL[ev.s.tool] && TOOL[ev.s.tool].voice) || ev.s.tool] || 'piano';
@@ -27,7 +28,9 @@ export function playEvent(lane, ev, S) {
     ev = { ...ev, shift: (ev.shift || 0) + Math.round(Math.max(MAP.hy, 0.35) * (ev.y - ev._ry) / 2 * fs() * MAP.span * MAP.rot.pitch), pan: lerp(ev.pan, clamp(ev._rx * fs(), -1, 1) * 0.6, MAP.rot.pan) };
   }
   const bright = ARR.P.bright * MAP.colorMod[toneIdx(ev.s) % 7].bright * toneEnv(inst);
-  voice(inst, fold(mtof(lineNote(ev, inst))), t, ev.w * (inst === 'pad' ? 0.9 : 0.85), inst === 'pad' ? Math.max(dur, 1.2) : dur, ev.pan, bright, ev.s);
+  const hz = fold(mtof(lineNote(ev, inst)));
+  midiNote(ev.vi || 0, 69 + 12 * Math.log2(hz / 440), ev.w, t, dur);   // the same pitch the built-in voice plays, on that voice's channel
+  voice(inst, hz, t, ev.w * (inst === 'pad' ? 0.9 : 0.85), inst === 'pad' ? Math.max(dur, 1.2) : dur, ev.pan, bright, ev.s);
 }
 export function scheduleGrains(S0, S1) {
   const amt = Math.max(ARR.amt.granular, MAP.vibe && MAP.vibe.grainfb ? 0.45 : 0) * spaceAmt();
@@ -89,6 +92,7 @@ export function schedule() {
   if (S1 <= S0) return;
   const B0 = beatAt(S0), B1 = beatAt(S1);
   scheduleGrains(S0, S1); scheduleTexture(S0, S1); scheduleGlitch(B0, B1);
+  midiClock(B0, B1, b => secAt(b) + pausedTotal - audioOffset); midiKnobs();
   LANES.forEach((lane, li) => {
     const P = lane.period, n = lane.events.length;
     if (!(P > 0) || !n) return;

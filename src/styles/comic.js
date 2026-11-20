@@ -2,7 +2,7 @@
 import { tint, shade } from '../core/color.js';
 import { F, S, CLIP, END, INKL, HALF, PAT } from '../render/ops.js';
 
-export const comic = (c, sh, dk, rim) => () => [INKL(-0.1), F(1, rim), CLIP, F(1, dk, 0.12), HALF(shade(dk, 0.45), 0.55, 0.12), F(1, sh, 0.34), F(1, c, 0.6), F(0.26, '#ffffff', 0.64), END];
+export const comic = (c, sh, dk, rim) => () => [INKL(-0.1), F(1, rim), CLIP, F(1, dk, 0.12), HALF(shade(dk, 0.45), 0.55, 0.12), F(1, sh, 0.34), F(1, c, 0.6), S('hi', '#ffffff', 0.5, 0.16, 0.95), END];
 export const cloud = () => [INKL(-0.1), F(1, '#a6d6f3'), CLIP, HALF('#6f9fc0', 0.6), F(1, '#ffffff', 0.36), END];
 export const hatch = paper => () => [INKL(-0.1), F(1, paper), CLIP, PAT('cross', '#0c0c12'), F(1, paper, 0.42), PAT('hatch', '#0c0c12', 0.42), F(1, paper, 0.85), END];
 export const drip = (c, sh) => () => [F(1, sh), CLIP, F(1, c, 0.22), S(0.5, tint(c, 0.35), 0.4, 0.45), S(0.24, '#ffffff', 0.5, 0.45, 0.75), END];
@@ -29,7 +29,7 @@ export const flowerVine = { name: 'Flower vine', accent: '#ff3fb4', glow: '#1fd1
 // ----- One colour in, a whole comic palette out: the Comic tab picks brush and colour separately (v24) -----
 const INKC = '#0c0c12';
 const celT = c => comic(c, shade(c, 0.2), shade(c, 0.48), tint(c, 0.4))();
-const popT = c => [INKL(-0.1), F(1, c), CLIP, HALF(shade(c, 0.42), 0.8, 0.08), F(0.3, '#ffffff', 0.6), END];
+const popT = c => [INKL(-0.1), F(1, c), CLIP, HALF(shade(c, 0.42), 0.8, 0.08), S('hi', '#ffffff', 0.5, 0.16, 0.95), END];
 const cloudT = c => [INKL(-0.1), F(1, tint(c, 0.3)), CLIP, HALF(shade(c, 0.2), 0.6), F(1, tint(c, 0.9), 0.36), END];
 const hatchT = c => hatch(tint(c, 0.72))();
 comics[0].tintOps = celT; comics[0].label = 'Cel';
@@ -49,3 +49,7 @@ export const brushInk = { name: 'Brush ink', label: 'Ink', accent: '#0c0c12', gl
 // Pop: flat colour under big Ben-Day dots, one hard highlight
 export const pop = { name: 'Pop', label: 'Pop', accent: '#ee3b3f', glow: '#ee3b3f', glowA: 0, make: () => popT('#ee3b3f'), comic: true, tintOps: popT,
   swatch: '#ee3b3f', swatchFor: c => `radial-gradient(circle at 30% 30%, #fff 0 9%, transparent 10%), radial-gradient(${shade(c, 0.42)} 0 30%, transparent 32%) 0 0 / 7px 7px, radial-gradient(circle, ${c} 0 60%, ${INKC} 64%)` };
+// Highlights (v37): Cel and Pop get a soft-edged highlight on its own smoothed path (shape.paths.hi, see hiPath in
+// render/shapes.js) in place of a hard white band, which read as a line drawn inside the shape and could touch the ink.
+for (const m of comics) m.hi = 0.17;
+pop.hi = 0.19;
