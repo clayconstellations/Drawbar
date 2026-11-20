@@ -1,7 +1,8 @@
 // Input: drawing, erasing (works through copies and tile wrap), pointer handling
 import { eraseTester, fs, tiled } from '../canvas/index.js';
 import { isVisual } from './layout.js';
-import { rebuild, strokeAdded } from './settings.js';
+import { liveSound, rebuild, strokeAdded } from './settings.js';
+import { setLiveStroke } from '../sound/arranger.js';
 import { checkpoint, prefs, redoStack, score, takeId, ui, undoStack } from './state.js';
 import { prepare, smoothStroke, speedN } from './stroke.js';
 import { TOOL, brushSize, stampRadius } from './tools.js';
@@ -35,6 +36,17 @@ export function addPoint(e) {
   { const k = prefs.smooth === false && !world().render.smooth ? 1 : 0.25; cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
   const last = cur.pts[cur.pts.length - 1];
   if (Math.hypot(cur.sx - last[0], cur.sy - last[1]) > 0.003) cur.pts.push([cur.sx, cur.sy, t, pressureOf(e)]);
+  hearSoFar(e.timeStamp);
+}
+// Sound while drawing: about five times a second the line so far is read into the music (still strokes only: a loop's
+// timing is its whole gesture, and effect strokes make no notes of their own)
+function hearSoFar(now) {
+  if (!cur || cur.pts.length < 4 || cur.pts.length === cur.heardN || now - (cur.heardAt || 0) < 200) return;
+  if (TOOL[TOOL[cur.tool].as || cur.tool].kind !== 'static' || MATS[cur.color].under || !audioReady) return;
+  cur.heardAt = now; cur.heardN = cur.pts.length;
+  if (cur.S0 == null) cur.S0 = sessionNow();
+  const t = { id: cur.sid, tool: cur.tool, color: cur.color, tint: cur.tint, size: cur.size, pt: cur.pt, pts: cur.pts.slice(), start: cur.S0, startBeat: Math.round(beatAt(cur.S0) * 4) / 4 };
+  prepare(t); liveSound(t);
 }
 export function eraseAt(p) {
   const hit = eraseTester(p), next = [];
@@ -81,7 +93,7 @@ export function finishStroke(e) {
   const pts = cur.pts.length > 2 && (prefs.smooth !== false || world().render.smooth) ? smoothStroke(cur.pts, cur.size) : cur.pts;
   const S = sessionNow();
   const s = { id: cur.sid, tool: TOOL[cur.tool].as || cur.tool, head: cur.tool === 'trace' || undefined, pt: cur.pt, color: cur.color, size: cur.size, fx: MATS[cur.color].live ? score.fx : undefined, tint: cur.tint, pts, start: S, startBeat: Math.round(beatAt(S) * 4) / 4 };
-  cur = null;
+  cur = null; setLiveStroke(null);
   prepare(s);
   checkpoint();
   score.strokes.push(s);

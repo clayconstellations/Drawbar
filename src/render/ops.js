@@ -99,14 +99,33 @@ export function drawShape(c, sh, ops) {
       x0 = Math.max(x0, Math.floor(ax - pad)); y0 = Math.max(y0, Math.floor(ay - pad)); x1 = Math.min(x1, Math.ceil(bx + pad)); y1 = Math.min(y1, Math.ceil(by + pad));
     }
     const w = x1 - x0, h = y1 - y0; if (w < 1 || h < 1) return;
-    if (!partC) { partC = document.createElement('canvas'); partX = partC.getContext('2d'); }
-    if (partC.width < w || partC.height < h) { partC.width = Math.max(partC.width, w); partC.height = Math.max(partC.height, h); }
-    for (const p of sh.parts) {
-      partX.setTransform(1, 0, 0, 1, 0, 0); partX.globalCompositeOperation = 'source-over'; partX.globalAlpha = 1; partX.clearRect(0, 0, w, h);
-      partX.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
-      drawShape(partX, p, rest);
-      partX.globalCompositeOperation = 'destination-in'; partX.globalAlpha = 1; partX.fillStyle = '#000'; partX.fill(p.band);
-      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(partC, 0, 0, w, h, x0, y0, w, h); c.restore();
+    if (!partC) { partC = [0, 1].map(() => document.createElement('canvas')); partX = partC.map(cv => cv.getContext('2d')); }
+    for (const cv of partC) if (cv.width < w || cv.height < h) { cv.width = Math.max(cv.width, w); cv.height = Math.max(cv.height, h); }
+    const P = sh.parts, render = (k, X) => {
+      X.setTransform(1, 0, 0, 1, 0, 0); X.globalCompositeOperation = 'source-over'; X.globalAlpha = 1; X.clearRect(0, 0, w, h);
+      X.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
+      drawShape(X, P[k], rest);
+      X.globalCompositeOperation = 'destination-in'; X.globalAlpha = 1; X.fillStyle = '#000'; X.fill(P[k].band);
+    };
+    const [lx, ly] = localLight(c), sc = Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)), ldx = m.a * lx + m.c * ly, ldy = m.b * lx + m.d * ly, dl = Math.hypot(ldx, ldy) || 1, far = 20000;
+    let cur = 0; render(0, partX[0]);
+    for (let k = 0; k < P.length; k++) {
+      // Where a piece passes over an earlier stretch of the same stroke it throws a short shadow onto it (v38). The
+      // shadow of the NEXT piece is laid before this one is pasted, so this piece covers whatever falls at the join
+      // between them; and it only lands on pieces two or more back (never on the canvas or on other strokes).
+      const nx = k + 1;
+      if (nx < P.length) {
+        render(nx, partX[1 - cur]);
+        if (nx >= 2) {
+          const q = P[nx];
+          if (!q.under) { q.under = new Path2D(); for (let j = 0; j <= nx - 2; j++) q.under.addPath(P[j].paths[1]); }
+          c.save(); c.clip(q.under); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1;
+          c.shadowColor = 'rgba(6,6,16,0.5)'; c.shadowBlur = 0.3 * sh.w0 * sc; c.shadowOffsetX = far - ldx / dl * 0.34 * sh.w0 * sc; c.shadowOffsetY = -ldy / dl * 0.34 * sh.w0 * sc;
+          c.drawImage(partC[1 - cur], 0, 0, w, h, x0 - far, y0, w, h); c.restore();
+        }
+      }
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.drawImage(partC[cur], 0, 0, w, h, x0, y0, w, h); c.restore();
+      cur = 1 - cur;
     }
     return;
   }

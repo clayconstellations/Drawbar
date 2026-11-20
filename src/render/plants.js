@@ -103,6 +103,57 @@ const HEADS = {
     for (let k = 0, n = 4 + Math.floor(g.rnd() * 3); k < n; k++) { const a = g.rnd() * TAU, d = r * 0.7 * Math.sqrt(g.rnd()); circ(g.P.spot, [c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d], r * (0.1 + 0.1 * g.rnd())); }
     for (let k = 0; k < 4; k++) circ(g.P.spore, f(R * (1.7 + 1.3 * g.rnd()), R * (g.rnd() - 0.5) * 1.6), R * (0.04 + 0.05 * g.rnd()));
   },
+  // ----- Vine flowers (v38) -----
+  // Daisy: a ring of long narrow petals over a paler ring, a domed yellow middle
+  daisy(g, x, y, R, ang) {
+    const c = frame(x, y, ang)(R * 0.5, 0), rot = g.rnd() * TAU, n = 11 + Math.floor(g.rnd() * 4);
+    for (let k = 0; k < n; k++) { const a = rot + (k + 0.5) * TAU / n; ell(g.P.petalLo, [c[0] + Math.cos(a) * R * 0.58, c[1] + Math.sin(a) * R * 0.58], R * 0.5, R * 0.15, a); }
+    for (let k = 0; k < n; k++) { const a = rot + k * TAU / n, l = R * (0.52 + 0.1 * g.rnd()); ell(g.P.petal, [c[0] + Math.cos(a) * l, c[1] + Math.sin(a) * l], R * 0.5, R * 0.14, a); }
+    circ(g.P.ctr, c, R * 0.3); circ(g.P.ctrHi, [c[0] - R * 0.07, c[1] - R * 0.08], R * 0.17);
+  },
+  // Bluebell: a nodding bell on an arching stem, narrow at the top and flaring to three scallops; often a smaller second
+  bluebell(g, x, y, R, ang) {
+    const dir = g.rnd() < 0.5 ? 1 : -1, two = g.rnd() < 0.6;
+    const bell = (from, a, len, s) => {
+      const q = [from[0] + Math.cos(a) * len, from[1] + Math.sin(a) * len];
+      stalk(g.P.stalk, from, q, 0.25 * dir, R * 0.06, R * 0.045);
+      const ba = a + dir * 1.15, f = frame(q[0], q[1], ba), P = g.P.bell, H = g.P.bellHi;
+      const pt = (u, v) => f(s * u, s * v), cub = (c1, c2, e) => P.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], e[0], e[1]), quad = (c, e) => P.quadraticCurveTo(c[0], c[1], e[0], e[1]);
+      const A = pt(0, -0.14); P.moveTo(A[0], A[1]);
+      cub(pt(0.0, -0.62), pt(0.95, -0.38), pt(1.2, -0.78));
+      quad(pt(1.5, -0.52), pt(1.2, -0.26)); quad(pt(1.55, 0), pt(1.2, 0.26)); quad(pt(1.5, 0.52), pt(1.2, 0.78));
+      cub(pt(0.95, 0.38), pt(0.0, 0.62), pt(0, 0.14)); P.closePath();
+      ell(g.P.lip, pt(1.16, 0), s * 0.46, s * 0.09, ba + Math.PI / 2);
+      const h0 = pt(0.16, -0.05), h1 = pt(1.0, -0.46), hc1 = pt(0.3, -0.48), hc2 = pt(0.65, -0.12);
+      H.moveTo(h0[0], h0[1]); H.quadraticCurveTo(hc1[0], hc1[1], h1[0], h1[1]); H.quadraticCurveTo(hc2[0], hc2[1], h0[0], h0[1]); H.closePath();
+    };
+    bell([x, y], ang, R * 0.5, R * 0.8);
+    if (two) bell([x, y], ang - dir * 1.0, R * 0.75, R * 0.55);
+  },
+  // Tulip: a cup of three petals, the middle one lighter, on two small sepals
+  tulip(g, x, y, R, ang) {
+    const f = frame(x, y, ang);
+    leaf(g.P.leaf, [x, y], ang + 0.9, R * 0.6, R * 0.2); leaf(g.P.leaf, [x, y], ang - 0.9, R * 0.6, R * 0.2);
+    const pet = (P, v, tipV, wd, len) => { const a = f(0, v * 0.3), t = f(len, tipV), c1 = f(len * 0.45, v - wd), c2 = f(len * 0.45, v + wd); P.moveTo(a[0], a[1]); P.quadraticCurveTo(c1[0], c1[1], t[0], t[1]); P.quadraticCurveTo(c2[0], c2[1], a[0], a[1]); P.closePath(); };
+    pet(g.P.cup, -R * 0.4, -R * 0.62, R * 0.55, R * 1.5); pet(g.P.cup, R * 0.4, R * 0.62, R * 0.55, R * 1.5);
+    pet(g.P.cupHi, 0, 0, R * 0.62, R * 1.62);
+    pet(g.P.cupLine, 0, 0, R * 0.2, R * 1.2);
+  },
+  // Blossom: five round petals with a notch of light in each, a dark eye and a spray of stamens
+  blossom(g, x, y, R, ang) {
+    const c = frame(x, y, ang)(R * 0.55, 0), rot = g.rnd() * TAU;
+    for (let k = 0; k < 5; k++) { const a = rot + k * TAU / 5; circ(g.P.petal, [c[0] + Math.cos(a) * R * 0.52, c[1] + Math.sin(a) * R * 0.52], R * 0.44); }
+    for (let k = 0; k < 5; k++) { const a = rot + k * TAU / 5; ell(g.P.petalHi, [c[0] + Math.cos(a) * R * 0.6, c[1] + Math.sin(a) * R * 0.6], R * 0.26, R * 0.2, a); }
+    circ(g.P.ctr, c, R * 0.2);
+    for (let k = 0; k < 7; k++) { const a = rot + k * TAU / 7 + 0.3, e = [c[0] + Math.cos(a) * R * 0.36, c[1] + Math.sin(a) * R * 0.36]; stalk(g.P.stamen, c, e, 0, R * 0.025, R * 0.02); circ(g.P.dot, e, R * 0.06); }
+  },
+  // Marigold: three crowded rings of small round petals, darker toward the outside
+  marigold(g, x, y, R, ang) {
+    const c = frame(x, y, ang)(R * 0.5, 0), rot = g.rnd() * TAU;
+    for (const [key, n, rad, r] of [['ruff', 13, 0.78, 0.26], ['petal', 10, 0.52, 0.25], ['petalHi', 7, 0.27, 0.2]])
+      for (let k = 0; k < n; k++) { const a = rot + (k + (key === 'petal' ? 0.5 : 0)) * TAU / n; circ(g.P[key], [c[0] + Math.cos(a) * R * rad, c[1] + Math.sin(a) * R * rad], R * r); }
+    circ(g.P.ruff, c, R * 0.78); circ(g.P.petal, c, R * 0.52); circ(g.P.petalHi, c, R * 0.27); circ(g.P.ctr, c, R * 0.12);
+  },
   // Star-shaped bloom with two rings of pointed petals
   starbloom(g, x, y, R, ang) {
     const c = frame(x, y, ang)(R * 0.6, 0), rot = g.rnd() * TAU, n = 6 + Math.floor(g.rnd() * 3);
@@ -126,6 +177,12 @@ const SPROUT = {
   lantern: { gap: [1.5, 2.4], len: [0.6, 1.5], R: [0.7, 1.0], w: 0.08, side: 'alt', vine: 0.12 },
   puffball: { gap: [1.4, 2.3], len: [1.0, 2.4], R: [0.7, 1.1], w: 0.13, side: 'up' },
   starbloom: { gap: [2.4, 3.4], len: [0.6, 1.4], R: [1.0, 1.5], w: 0.1, side: 'alt', vine: 0.14 },
+  // v38 vine flowers. leaf: a leaf on the vine opposite each flower, this many half-widths long
+  daisy: { gap: [1.9, 2.8], len: [0.7, 1.6], R: [0.85, 1.25], w: 0.09, side: 'alt', vine: 0.13, leaf: 1.2 },
+  bluebell: { gap: [2.2, 3.2], len: [0.5, 1.0], R: [1.0, 1.4], w: 0.08, side: 'alt', vine: 0.12, leaf: 1.5 },
+  tulip: { gap: [1.7, 2.6], len: [0.9, 1.9], R: [0.7, 1.0], w: 0.1, side: 'alt', vine: 0.14, leaf: 1.7 },
+  blossom: { gap: [1.6, 2.4], len: [0.5, 1.2], R: [0.8, 1.15], w: 0.09, side: 'alt', vine: 0.15, leaf: 0.9 },
+  marigold: { gap: [2.0, 2.9], len: [0.6, 1.3], R: [0.85, 1.2], w: 0.1, side: 'alt', vine: 0.14, leaf: 1.3 },
 };
 
 // Grow a plant. keys: the piece names this plant's material colours. Returns { key: Path2D, ..., all: every piece }.
@@ -134,7 +191,8 @@ export function growPlant(kind, keys, id, line, beads) {
   const made = {}, P = new Proxy(made, { get: (t, k) => t[k] || (t[k] = new Path2D()) });
   const g = { P, rnd: mulberry32(hash32(id, 777)) }, rnd = g.rnd, between = ([a, b]) => a + (b - a) * rnd();
   if (beads) {
-    for (const b of beads) HEADS[kind](g, b.x, b.y, b.r * 2.2, -Math.PI / 2 + (rnd() - 0.5) * 0.5);
+    // A tap (b.tap) grows one head the size it would be on a line drawn with the same brush (it was 2.3 times that)
+    for (const b of beads) HEADS[kind](g, b.x, b.y, b.tap ? b.r / 1.4 * 1.35 * (SPROUT[kind].R[0] + SPROUT[kind].R[1]) / 2 : b.r * 2.2, -Math.PI / 2 + (rnd() - 0.5) * 0.5);
   } else {
     const { xs, ys, nx, ny, L, n, w0 } = line, S = SPROUT[kind];
     // "Up" is the side of the line facing the top of the drawing, so caps and stalks rise in free mode
@@ -161,6 +219,7 @@ export function growPlant(kind, keys, id, line, beads) {
       const base = [xs[j], ys[j]], tip = [xs[j] + Math.cos(ang) * len, ys[j] + Math.sin(ang) * len];
       const arrive = len > 0 ? stalk(P.stalk, base, tip, (rnd() - 0.5) * 0.5, w0 * S.w, w0 * S.w * 0.7) : S.side === 'any' ? rnd() * TAU : ang;
       HEADS[kind](g, tip[0], tip[1], w0 * between(S.R) * 1.35, arrive);
+      if (S.leaf) leaf(P.leaf, base, ang + Math.PI + (rnd() - 0.5) * 0.9, w0 * S.leaf * (0.8 + 0.4 * rnd()), w0 * S.leaf * 0.36);
       d += w0 * between(S.gap);
     }
   }

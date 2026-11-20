@@ -3,10 +3,11 @@
 // Later genres: to be decided (soundscape, impressionist, lofi).
 export default {
   id: 'garden', name: 'Garden',
-  mats: ['Glowcaps', 'Bellcaps', 'Trumpets', 'Puffballs', 'Spirals', 'Starbloom', 'Moonberries', 'Lanterns'],
+  // v38: five vine flowers took the places of Glowcaps, Bellcaps, Trumpets, Puffballs and Lanterns (those stay in MATS, so old drawings still open)
+  mats: ['Daisies', 'Bluebells', 'Tulips', 'Blossom', 'Spirals', 'Starbloom', 'Moonberries', 'Marigolds'],
   tools: ['glow', 'erase'],
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 24, copies: 6, tiles: 4, turns: 3, rotate: true },   // no 6-turn hex tiling: ~300 ms to redraw with the film grain
-  start: { mode: 'free', copies: 4, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Glowcaps' },
+  start: { mode: 'free', copies: 4, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Daisies' },
   render: { sprites: true },
 };

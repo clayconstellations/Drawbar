@@ -3,7 +3,7 @@
 // (The Pixel option was removed in v27.)
 // Later genres: IDM, acid, electro, EDM; with Pixel: lofi, house, chiptune.
 export default {
-  id: 'geometric', name: 'Geometric',
+  id: 'geometric', name: 'Geometric', legacy: true,   // cut as a style in v38: its tab shows only while an old Geometric clip is open
   mats: ['Red', 'Orange', 'Yellow', 'Green', 'Teal', 'Blue', 'Lilac', 'Pink', 'Cream'],
   options: { gridMats: true },   // its brushes are plain colours: shown as the 3 x 3 colour grid
   tools: ['chain', 'circle', 'square', 'triangle', 'hexagon', 'star', 'erase'],

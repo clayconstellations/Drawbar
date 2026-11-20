@@ -9,7 +9,7 @@ import { prepare } from './stroke.js';
 import { setBpm } from './transport.js';
 import { mapInput, syncChip, syncUI } from './ui.js';
 import { appendStroke, checkHiddenSoon, ensureCanvases, fb, markGroupsDirty, refreshHidden, releaseCanvases, syncDraw } from '../render/compose.js';
-import { ARR, rearrange } from '../sound/arranger.js';
+import { ARR, rearrange, setLiveStroke } from '../sound/arranger.js';
 import { applyAudio, applyTempoParams } from '../sound/graph.js';
 import { MAP, applyKeyScale, useMap } from '../sound/maps.js';
 import { SCALE_DEFS } from '../sound/vocab.js';
@@ -28,6 +28,9 @@ export function strokeAdded(s) {
   if (cap && score.strokes.length > cap) { score.strokes.splice(0, score.strokes.length - cap); rebuild(undefined, true); return; }
   checkHiddenSoon(); rearrange(); applyAudio();
 }
+// Sound while drawing (v38): the mark in progress joins the music a few times a second as it grows, so you hear what
+// a line is doing before you lift. Its notes shift as the line changes; the finished stroke takes over on lifting.
+export function liveSound(s) { setLiveStroke(s); rearrange(); applyAudio(0.08); }
 // The hidden-stroke test found a change: hidden strokes are silent, so re-arrange
 export function hiddenChanged() { rearrange(); applyAudio(); }
 export function applySettings(st, tc) {

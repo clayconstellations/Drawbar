@@ -30,3 +30,17 @@ export const plants = [
   plant('Starbloom', 'starbloom', '#18c29c', '#ff6fcf', [['petal', '#ff3fb4'], ['petalHi', '#ffc2e8'], ['ctr', '#ffe14d'], ['dot', '#ff8a00']],
     'conic-gradient(#ff3fb4 0 10%, #160b33 0 17%, #ff3fb4 0 27%, #160b33 0 34%, #ff3fb4 0 44%, #160b33 0 51%, #ff3fb4 0 61%, #160b33 0 68%, #ff3fb4 0 78%, #160b33 0 85%, #ff3fb4 0 95%, #160b33 0)'),
 ];
+
+// v38: flowers on vines, one colour family each. Appended to MATS on their own (see styles/index.js)
+const flower = (c, eye, bg = '#160b33') => `radial-gradient(circle, ${eye} 0 16%, transparent 18%), repeating-conic-gradient(${c} 0 9%, ${bg} 9% 12.5%), ${bg}`;
+export const vineFlowers = [
+  plant('Daisies', 'daisy', '#2f9e5b', '#ffffff', [['leaf', '#3fbf6f'], ['petalLo', '#c9d3f5'], ['petal', '#ffffff'], ['ctr', '#ffb300'], ['ctrHi', '#ffe066']], flower('#ffffff', '#ffb300')),
+  plant('Bluebells', 'bluebell', '#2a8f6a', '#5a7dff', [['leaf', '#37b98a'], ['bell', '#3f5bff'], ['lip', '#6f8cff'], ['bellHi', '#a9bbff']],
+    'radial-gradient(ellipse 30% 42% at 50% 56%, #3f5bff 0 96%, transparent 100%), radial-gradient(ellipse 8% 24% at 50% 22%, #2a8f6a 0 96%, transparent 100%), #160b33'),
+  plant('Tulips', 'tulip', '#3a9d4a', '#ff4d4d', [['leaf', '#55c25f'], ['cup', '#e11d48'], ['cupHi', '#ff5c7a'], ['cupLine', '#ff9aad']],
+    'radial-gradient(ellipse 26% 40% at 50% 42%, #ff5c7a 0 96%, transparent 100%), radial-gradient(ellipse 40% 36% at 50% 48%, #e11d48 0 96%, transparent 100%), #160b33'),
+  plant('Blossom', 'blossom', '#8a5a44', '#ff9ecb', [['leaf', '#7bcf6a'], ['petal', '#ff8fc4'], ['petalHi', '#ffd3ea'], ['ctr', '#c2255c'], ['stamen', '#ffe9a8'], ['dot', '#ffd43b']],
+    'radial-gradient(circle, #c2255c 0 12%, transparent 14%), radial-gradient(circle at 50% 24%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 75% 42%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 66% 72%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 34% 72%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 25% 42%, #ff8fc4 0 20%, transparent 22%), #160b33'),
+  plant('Marigolds', 'marigold', '#4f9a3a', '#ff9d2e', [['leaf', '#6dbb4a'], ['ruff', '#e8590c'], ['petal', '#ff922b'], ['petalHi', '#ffd43b'], ['ctr', '#a63c06']],
+    'radial-gradient(circle, #ffd43b 0 20%, #ff922b 22% 40%, #e8590c 42% 58%, #160b33 62%)'),
+];

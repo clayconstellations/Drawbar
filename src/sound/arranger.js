@@ -14,6 +14,10 @@ import { world } from '../worlds/index.js';
 const HUE_STEPS = 15;
 export let ARR = null, LANES = [];
 export function rearrange() { ARR = arrange(); LANES = ARR.lanes; }
+// The stroke being drawn right now, heard as it grows (v38): arrange() reads it as if it were the newest stroke
+let liveStroke = null;
+export const setLiveStroke = s => { liveStroke = s; };
+const strokesNow = () => liveStroke ? [...score.strokes, liveStroke] : score.strokes;
 export const metric = st => st % 16 === 0 ? 1 : st % 8 === 0 ? 0.85 : st % 4 === 0 ? 0.7 : st % 2 === 0 ? 0.45 : 0.25;
 export const nearestOf = (list, b) => list.reduce((best, o) => Math.abs(Math.log(o / Math.max(b, 0.1))) < Math.abs(Math.log(best / Math.max(b, 0.1))) ? o : best, 4);
 export const phraseBeats = b => nearestOf([2, 4, 8, 16], b);
@@ -57,7 +61,7 @@ export function select(cands, budget, steps, poly, clocked, swing) {
 function effectPass(cands, steps) {
   const fx = score.strokes.filter(s => MATS[s.color].under && !HIDDEN.has(s) && s._xs);
   if (!fx.length || !cands.length) return;
-  const order = new Map(score.strokes.map((s, i) => [s, i]));
+  const order = new Map(strokesNow().map((s, i) => [s, i]));
   for (const f of fx) {
     const kind = MATS[f.color].under, n = f.pts.length, st = Math.max(1, Math.floor(n / 40)), pts = [], at = order.get(f);
     for (let i = 0; i < n; i += st) pts.push([f._xs[i], f._ys[i], f._w[i] * 3]);
@@ -104,7 +108,7 @@ function assignVoices(lanes) {
 export function arrange() {
   // Strokes hidden under newer ones are out of the music too
   const zoom = fs();   // Size: what you hear is read from the drawing as it appears
-  const S = score.strokes.filter(s => !HIDDEN.has(s) && !MATS[s.color].under),   // effect strokes (Glitch) change the picture only
+  const S = strokesNow().filter(s => !HIDDEN.has(s) && !MATS[s.color].under),   // effect strokes (Glitch) change the picture only
   n = S.length, kale = score.mode === 'kaleido', clocked = score.timing === 'clocked';
   let hmin = 1, hmax = 0;
   for (const s of S) for (let i = 0; i < s.pts.length; i += 3) { const h = rawH(s.pts[i][0], s.pts[i][1]); hmin = Math.min(hmin, h); hmax = Math.max(hmax, h); }

@@ -57,7 +57,12 @@ export function makeMap(n) {
     texture: P(0.2, 0.3, 0.7),
     glitch: (() => { const on = x() < 0.2, p = X(0.08, 0.22), slice = xpick([0.25, 0.125, 0.125, 0.0625]), len = xpick([0.5, 1, 1, 2]); return on ? { p, slice, len } : null; })(),
   };
-  return {
+  // v38: in 20% of maps the drums get effects too, from a generator of its own (so nothing older moves): echoes
+  // through the map's delay, a bigger room, or a copy through the vibe chain (when the map's chain does something)
+  const y = mulberry32(hash32(n, 0x5e38)), dOn = y() < 0.2, yd = y(), yr = y(), yv = y(), ya = y(), chain = vibe.sat > 0 || vibe.phaser > 0 || vibe.lossy > 0 || !!vibe.glitch;
+  const dfx = { delay: dOn && yd < 0.5 ? 0.2 + 0.25 * ya : 0, room: dOn && yr < 0.4 ? 0.2 + 0.25 * ya : 0, vibe: dOn && chain && yv < 0.6 ? 0.5 + 0.4 * ya : 0 };
+  if (dOn && !dfx.delay && !dfx.room && !dfx.vibe) dfx.delay = 0.2 + 0.25 * ya;
+  return { dfx,
     n, fx, W, targets, density, kit, tone, synth, syn, dx, voices, vw, vk, vph, vibe,
     lineInst,
     canonInt: pick([2, 4, -3, 5]),

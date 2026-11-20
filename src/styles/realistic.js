@@ -45,7 +45,7 @@ export const glass = { name: 'Glass', label: 'Glass', accent: '#9fd8ee', glow: '
 // Wax: light gets into it, so the shadow side stays coloured and the shine is wide and dull. 3 blurred layers.
 const waxT = c => [SOFTDROP(0.35), F(1, shade(c, 0.26)), CLIP, S(1, shade(c, 0.12), 0.12, 0.5), S(0.8, tint(c, 0.2), 0.26, 0.6), S(0.42, tint(c, 0.62), 0.36, 0.55, 0.6), F(0.2, '#ffffff', 0.5, 0.16), END];
 // Pearl: pale, with a pink sheen on the shadow side and a blue one toward the light. 4 blurred layers.
-const pearlT = c => { const b = tint(c, 0.66); return [SOFTDROP(0.4), F(1, shade(b, 0.42)), CLIP, S(1, b, 0.14, 0.4), S(0.72, '#ffc4e2', -0.2, 0.5, 0.5), S(0.7, '#c2ecff', 0.26, 0.5, 0.6), S(0.3, '#ffffff', 0.44, 0.35, 0.95), END]; };
+const pearlT = c => { const b = tint(c, 0.24); return [SOFTDROP(0.4), F(1, shade(c, 0.5)), CLIP, S(1, b, 0.14, 0.4), S(0.72, '#ffc4e2', -0.2, 0.5, 0.34), S(0.7, '#c2ecff', 0.26, 0.5, 0.42), S(0.3, '#ffffff', 0.44, 0.35, 0.95), END]; };   // v38: more of the colour, less of the sheens
 // Brushed metal: two blurred layers for the round, then fine hard bands along the line (plain fills) for the grain,
 // and one soft shine. 3 blurred layers.
 const BANDS = [0.95, 0.88, 0.8, 0.73, 0.66, 0.58, 0.5, 0.43, 0.35, 0.27, 0.19, 0.11];
@@ -55,7 +55,7 @@ const brushedT = c => [SOFTDROP(0.5), F(1, shade(c, 0.5)), CLIP, S(1, shade(c, 0
 const rubberT = c => [SOFTDROP(0.45), F(1, shade(c, 0.74)), CLIP, S(1, shade(c, 0.58), 0.12, 0.4), S(0.78, shade(c, 0.34), 0.3, 0.55), S(0.3, tint(c, 0.3), 0.46, 0.4, 0.42), END];
 const more = (name, label, c0, ops, sw) => ({ name, label, accent: c0, glow: c0, glowA: 0, make: () => ops(c0), tintOps: ops, swatch: sw(c0), swatchFor: sw });
 export const wax = more('Wax', 'Wax', '#f7da7a', waxT, c => `radial-gradient(circle at 38% 34%, ${tint(c, 0.6)} 0 14%, ${tint(c, 0.15)} 50%, ${shade(c, 0.22)} 100%)`);
-export const pearl = more('Pearl', 'Pearl', '#eef1f6', pearlT, c => `radial-gradient(circle at 36% 32%, #fff 0 9%, #c2ecff 30%, ${tint(c, 0.66)} 52%, #f3bfd9 76%, ${shade(tint(c, 0.66), 0.4)} 100%)`);
+export const pearl = more('Pearl', 'Pearl', '#eef1f6', pearlT, c => `radial-gradient(circle at 36% 32%, #fff 0 9%, #c2ecff 26%, ${tint(c, 0.24)} 50%, ${tint(c, 0.2)} 76%, ${shade(c, 0.5)} 100%)`);
 export const brushed = more('Brushed metal', 'Brushed', '#e2b24a', brushedT, c => `repeating-linear-gradient(100deg, rgba(255,255,255,.2) 0 1px, rgba(0,0,0,.2) 1px 2px, transparent 2px 3px), linear-gradient(190deg, ${tint(c, 0.45)}, ${shade(c, 0.5)})`);
 export const rubber = more('Rubber', 'Rubber', '#f08a5c', rubberT, c => `radial-gradient(circle at 36% 32%, ${shade(c, 0.1)} 0 7%, ${shade(c, 0.4)} 34%, ${shade(c, 0.74)} 100%)`);
 // Soft highlights on their own smoothed path (v37), as in Comic: Glass and Slime had hard white bands

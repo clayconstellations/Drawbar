@@ -162,6 +162,9 @@ export function buildAudio(ctx) {   // ctx: an offline context, for measuring lo
   for (let i = 0; i < 4; i++) { const d = delay(0.1, 1), g = gain(0), p = panner((i % 2 ? 1 : -1) * (0.3 + 0.15 * i)); N.texSend.connect(d).connect(g).connect(p).connect(N.texOut); N.texTaps.push({ d, g }); }
   N.glIn = gain(1); N.glD = delay(0.15, 1.5); N.glFb = gain(0); N.glWet = gain(0);
   N.vibeTap.connect(N.glIn).connect(N.glD); N.glD.connect(N.glFb).connect(N.glD); N.glD.connect(N.glWet).connect(N.toneVol);
+  // Drum effects (v38, MAP.dfx): echoes into the delay line, and a copy into the vibe chain
+  N.drumDly = gain(0); N.drumVol.connect(N.drumDly).connect(N.dly);
+  N.drumVibe = gain(0); N.drumVol.connect(N.drumVibe).connect(N.vibeIn);
   N.fam = {};
   for (const f of FAMS) {
     const inp = gain(1), lp = filt('lowpass', 18000), hs = actx.createBiquadFilter(), dry = gain(1), send = gain(0);
@@ -226,6 +229,7 @@ export function applyVibe(tc = 0.25) {
   // the granular delay's feedback goes through an octave shift, up or down, so repeats climb or sink
   for (const dir of [1, -1]) { const amt = V.grainfb && V.grainfb.dir === dir ? V.grainfb.amt : 0; if (amt > 0 || N.sh['g' + dir]) set(shifter('g' + dir, 12 * dir, N.granOut, N.granSend).gain, amt); }
   set(N.texSend.gain, V.texture);
+  { const D = MAP.dfx || {}; set(N.drumDly.gain, D.delay || 0); set(N.drumRev.gain, 0.14 + (D.room || 0)); set(N.drumVibe.gain, D.vibe || 0); }
   if (!V.glitch) { set(N.glWet.gain, 0); set(N.glFb.gain, 0); set(N.glIn.gain, 1); set(N.vibeDry.gain, 0.7); }
 }
 export function applyAudio(tc = 0.25) {

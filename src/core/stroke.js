@@ -140,7 +140,7 @@ export function prepare(s) {
       if (M.clear) s._shape.noHide = true;   // see-through: covers nothing
       s._shape.bb = s._bb;
       if (M.extra === 'bristle') s._shape.noHide = true;   // a dry brush covers nothing fully
-      if (M.hi) s._shape.paths.hi = hiPath(xs, ys, w, L, 0, n - 1, M.hi);
+      if (M.hi) { s._shape.paths.hi = hiPath(xs, ys, w, L, 0, n - 1, M.hi); if (M.comic) s._shape.paths.hiC = hiPath(xs, ys, w, L, 0, n - 1, M.hi * 0.5); }
       // Comic tubes (v37): where a comic stroke crosses or lies over itself it is also kept as a run of overlapping
       // pieces, drawn in order (see drawShape), so the later part passes over the earlier one with its own outline
       // instead of the two melting into one blob. Only strokes that do cross pay for this.
@@ -155,13 +155,24 @@ export function prepare(s) {
           let from = a0, to = b0; while (from > 0 && L[a0] - L[from] < reach) from--; while (to < n - 1 && L[to] - L[b0] < reach) to++;
           from -= from % 2;
           const pc = capsAlong(xs, ys, w, from, to, 2), part = buildShape(pc, [], M.ks, w0 * 0.9, inkT, inkOf(pc, from));
-          if (M.hi) part.paths.hi = hiPath(xs, ys, w, L, from, to, M.hi, from === 0, to === n - 1);
-          const band = new Path2D(), c0 = Math.max(0, a0 - 1), half = i => w[i] * 1.8 + inkT * 2 + w0 * 0.3, lft = [], rgt = [];
-          const push = (x, y, i) => { const h = half(i); lft.push([x + nx[i] * h, y + ny[i] * h]); rgt.push([x - nx[i] * h, y - ny[i] * h]); };
-          if (a0 === 0) push(xs[0] - ny[0] * w0 * 4, ys[0] + nx[0] * w0 * 4, 0);   // out past the first tip (the line runs along (ny, -nx))
-          for (let q = c0; q <= b0; q++) push(xs[q], ys[q], q);
-          if (b0 === n - 1) push(xs[b0] + ny[b0] * w0 * 4, ys[b0] - nx[b0] * w0 * 4, b0);   // and past the last
-          band.moveTo(lft[0][0], lft[0][1]); for (let q = 1; q < lft.length; q++) band.lineTo(lft[q][0], lft[q][1]); for (let q = rgt.length - 1; q >= 0; q--) band.lineTo(rgt[q][0], rgt[q][1]); band.closePath();
+          if (M.hi) { part.paths.hi = hiPath(xs, ys, w, L, from, to, M.hi, from === 0, to === n - 1); part.paths.hiC = hiPath(xs, ys, w, L, from, to, M.hi * 0.5, from === 0, to === n - 1); }
+          // The band is a run of rectangles, one per step of the line, with wedges filling the outside of each bend,
+          // every piece wound the same way. (v37 walked up one side of the line and back down the other; on a tight
+          // curl the inner side folded over itself and cancelled, leaving wedge-shaped holes in the tube.)
+          const band = new Path2D(), c0 = Math.max(0, a0 - 1), half = i => w[i] * 1.8 + inkT * 2 + w0 * 0.3, cl2 = [];
+          if (a0 === 0) cl2.push([xs[0] - ny[0] * w0 * 4, ys[0] + nx[0] * w0 * 4, half(0)]);   // out past the first tip (the line runs along (ny, -nx))
+          for (let q = c0; q <= b0; q++) cl2.push([xs[q], ys[q], half(q)]);
+          if (b0 === n - 1) cl2.push([xs[b0] + ny[b0] * w0 * 4, ys[b0] - nx[b0] * w0 * 4, half(b0)]);   // and past the last
+          const poly = pts => { let ar = 0; for (let q = 0; q < pts.length; q++) { const u = pts[q], v = pts[(q + 1) % pts.length]; ar += u[0] * v[1] - v[0] * u[1]; }
+            if (Math.abs(ar) < 1e-12) return; if (ar < 0) pts.reverse(); band.moveTo(pts[0][0], pts[0][1]); for (let q = 1; q < pts.length; q++) band.lineTo(pts[q][0], pts[q][1]); band.closePath(); };
+          let pn = null;
+          for (let q = 0; q < cl2.length - 1; q++) {
+            const [ax, ay, ah] = cl2[q], [bx, by, bh] = cl2[q + 1], dl = Math.hypot(bx - ax, by - ay); if (dl < 1e-9) continue;
+            const ux = -(by - ay) / dl, uy = (bx - ax) / dl, h = Math.max(ah, bh);
+            poly([[ax - ux * h, ay - uy * h], [bx - ux * h, by - uy * h], [bx + ux * h, by + uy * h], [ax + ux * h, ay + uy * h]]);
+            if (pn) { poly([[ax, ay], [ax + pn[0] * h, ay + pn[1] * h], [ax + ux * h, ay + uy * h]]); poly([[ax, ay], [ax - pn[0] * h, ay - pn[1] * h], [ax - ux * h, ay - uy * h]]); }
+            pn = [ux, uy];
+          }
           part.band = band; part.bb = s._bb; parts.push(part);
           a0 = b0;
         }
@@ -193,7 +204,7 @@ export function prepare(s) {
     s._shape = buildShape(caps, circ, M.ks, bw0, inkT);
     s._shape.bb = s._bb; if (M.clear) s._shape.noHide = true;
   }
-  if (s._dot && (M.glyph || M.plant || M.space || M.micro)) { shapeFromBeads(s, M, [{ x: p[0][0], y: p[0][1], r: (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz }]); return; }
+  if (s._dot && (M.glyph || M.plant || M.space || M.micro)) { shapeFromBeads(s, M, [{ x: p[0][0], y: p[0][1], r: (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz, tap: s.tool !== 'beads' }]); return; }
   if (s._dot) { const rr = (s.tool === 'beads' ? BEAD_R * 2.2 : NEON_W * 1.4) * sz; s._shape = buildShape([], [M.geo ? [p[0][0], p[0][1], rr * M.geo.bead, M.geo.sides, M.geo.spin] : [p[0][0], p[0][1], rr]], M.ks, rr, M.comic ? 0.26 * rr : (M.ink || 0) * rr); }
   if (s._dot && M.extra === 'bristle') s._shape.paths.br = dabPath(p[0][0], p[0][1], NEON_W * 1.4 * sz, hash32(s.id, 6)), s._shape.noHide = true;   // a dab of the brush
 }
