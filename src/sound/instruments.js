@@ -3,6 +3,7 @@ import { TAU, clamp, mod, mtof } from '../core/math.js';
 import { actx, adsr, driveCurve, env, filt, gain, noiseSrc, osc, panner } from './graph.js';
 import { MAP } from './maps.js';
 import { N } from './nodes.js';
+import { pieceTrim } from './trim.js';
 
 export let voiceEnds = [];
 export const resetVoices = () => { voiceEnds = []; waves.clear(); };
@@ -153,7 +154,7 @@ export function drumHit(piece, t, v, open) {
   const now = actx.currentTime;
   voiceEnds = voiceEnds.filter(e => e > now);
   if (voiceEnds.length > 56) return;
-  const D = MAP.dr, kit = MAP.kit, out = gain(1); out.connect(N.fam.drums.inp);
+  const D = MAP.dr, kit = MAP.kit, out = gain(pieceTrim(piece, MAP.n)); out.connect(N.fam.drums.inp);
   const src = [];
   let end = t + 0.3;
   const tone = (f0, f1, sw, dec, amp, type, dest) => {

@@ -21,7 +21,7 @@ export function playEvent(lane, ev, S) {
   if (lane.role === 'drums') { drumHit(ev.piece, t, ev.w, ev.open); return; }
   const pSec = lane.base === 'beat' ? lane.period * 60 / score.tempo : lane.period;
   const dur = clamp((ev.len || 0.1) * pSec, 0.08, 3);
-  const inst = MAP.lineInst[(TOOL[ev.s.tool] && TOOL[ev.s.tool].voice) || ev.s.tool] || 'piano';
+  const inst = ev.inst || MAP.lineInst[(TOOL[ev.s.tool] && TOOL[ev.s.tool].voice) || ev.s.tool] || 'piano';
   if (ev._rs != null) {
     // Free mode turning: each note is read from where its point has turned to. Higher on screen bends it up, and it drifts across the stereo field
     ev = { ...ev, shift: (ev.shift || 0) + Math.round(Math.max(MAP.hy, 0.35) * (ev.y - ev._ry) / 2 * fs() * MAP.span * MAP.rot.pitch), pan: lerp(ev.pan, clamp(ev._rx * fs(), -1, 1) * 0.6, MAP.rot.pan) };
@@ -30,7 +30,7 @@ export function playEvent(lane, ev, S) {
   voice(inst, fold(mtof(lineNote(ev, inst))), t, ev.w * (inst === 'pad' ? 0.9 : 0.85), inst === 'pad' ? Math.max(dur, 1.2) : dur, ev.pan, bright, ev.s);
 }
 export function scheduleGrains(S0, S1) {
-  const amt = ARR.amt.granular * spaceAmt();
+  const amt = Math.max(ARR.amt.granular, MAP.vibe && MAP.vibe.grainfb ? 0.45 : 0) * spaceAmt();
   if (amt <= 0.01) return;
   const rate = 6 + 14 * amt;
   for (let i = Math.ceil(S0 * rate); i / rate < S1; i++) {
@@ -44,13 +44,51 @@ export function scheduleGrains(S0, S1) {
     tap.g.gain.setValueAtTime(0, t); tap.g.gain.linearRampToValueAtTime(0.35, t + g / 2); tap.g.gain.linearRampToValueAtTime(0, t + g);
   }
 }
+// Texture (vibe): a dense stream of very short grains read from the targeted voices at odd speeds (half, double,
+// a fifth up, backwards), which leaves glittering artefacts behind the notes. Seeded by grain number.
+export function scheduleTexture(S0, S1) {
+  const V = MAP.vibe;
+  if (!V || !V.texture || !N.texTaps) return;
+  const rate = 30;
+  for (let i = Math.ceil(S0 * rate); i / rate < S1; i++) {
+    const r = mulberry32(hash32(MAP.n, i, 47)), tap = N.texTaps[mod(i, 4)], t = i / rate + pausedTotal - audioOffset + r() * 0.02;
+    if (t < actx.currentTime) continue;
+    const g = 0.02 + 0.05 * r(), slope = [0.5, -1, -0.5, 2][Math.floor(r() * 4)];
+    let d0 = 0.03 + r() * 0.35;
+    if (slope < 0) d0 = Math.max(d0, -slope * g + 0.01);
+    tap.d.delayTime.setValueAtTime(d0, t); tap.d.delayTime.linearRampToValueAtTime(d0 + slope * g, t + g);
+    tap.g.gain.setValueAtTime(0, t); tap.g.gain.linearRampToValueAtTime(0.5, t + g / 2); tap.g.gain.linearRampToValueAtTime(0, t + g);
+  }
+}
+// Glitch (vibe): now and then, on a beat, the last sliver of sound is caught and repeated for a beat or so while the
+// voices themselves duck. A delay line always holds the last slice; closing its input and opening its feedback loops it.
+let glDone = -1, glLast = 0;
+export function scheduleGlitch(B0, B1) {
+  const G = MAP.vibe && MAP.vibe.glitch;
+  if (B0 < glLast) glDone = -1;
+  glLast = B0;
+  if (!G || !N.glIn) return;
+  for (let k = Math.ceil(B0); k < B1; k++) {
+    if (k <= glDone) continue;
+    glDone = k;
+    if (hashFrac(MAP.n, k, 77) >= G.p) continue;
+    const t0 = secAt(k) + pausedTotal - audioOffset, t1 = secAt(k + G.len) + pausedTotal - audioOffset;
+    if (t0 < actx.currentTime) continue;
+    N.glIn.gain.setValueAtTime(0, t0); N.glFb.gain.setValueAtTime(0.97, t0);
+    N.glWet.gain.setValueAtTime(0, t0); N.glWet.gain.linearRampToValueAtTime(0.7, t0 + 0.004);
+    N.vibeDry.gain.setValueAtTime(0.7, t0); N.vibeDry.gain.linearRampToValueAtTime(0.12, t0 + 0.004);
+    N.glIn.gain.setValueAtTime(1, t1); N.glFb.gain.setValueAtTime(0, t1);
+    N.glWet.gain.setValueAtTime(0.7, t1 - 0.006); N.glWet.gain.linearRampToValueAtTime(0, t1);
+    N.vibeDry.gain.setValueAtTime(0.12, t1 - 0.006); N.vibeDry.gain.linearRampToValueAtTime(0.7, t1);
+  }
+}
 export const LOOKAHEAD = 0.12;
 export function schedule() {
   if (!playing || paused || !audioReady || actx.state !== 'running' || !ARR) return;
   const S0 = lastEnd, S1 = sessionNow() + LOOKAHEAD;
   if (S1 <= S0) return;
   const B0 = beatAt(S0), B1 = beatAt(S1);
-  scheduleGrains(S0, S1);
+  scheduleGrains(S0, S1); scheduleTexture(S0, S1); scheduleGlitch(B0, B1);
   LANES.forEach((lane, li) => {
     const P = lane.period, n = lane.events.length;
     if (!(P > 0) || !n) return;

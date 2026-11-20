@@ -82,6 +82,25 @@ function effectPass(cands, steps) {
     }
   }
 }
+// Which instrument plays a note (v36). It used to be the tool's instrument, so in a style with one tool only one of a
+// map's instruments was ever heard, and a line and "its" part were easy to tell. Now each note goes to whichever of
+// the map's four voices scores highest for it: on what its stroke is like (place, length, speed, bends, colour,
+// size), on how high the note is, and on a slow wave along the pattern. So one stroke can feed several instruments,
+// and any brush or colour can reach any of them. Seeded and fixed per map. Not in the legacy Classic world.
+function assignVoices(lanes) {
+  if (world().legacy || !MAP.voices) return;
+  for (const lane of lanes) if (lane.role !== 'drums') for (const ev of lane.events) {
+    const f = ev.s._f;
+    let best = 0, top = -1e9;
+    for (let v = 0; v < MAP.voices.length; v++) {
+      const W = MAP.vw[v];
+      let sc = W[11] * 0.5 + W[9] * (ev.h - 0.5) * 2.4 + W[10] * 0.8 * Math.sin(TAU * (ev.ph * MAP.vk[v] + MAP.vph[v]));
+      for (let i = 0; i < 7; i++) sc += W[i] * (f[i] - 0.4) * 0.9;
+      if (sc > top) { top = sc; best = v; }
+    }
+    ev.inst = MAP.voices[best];
+  }
+}
 export function arrange() {
   // Strokes hidden under newer ones are out of the music too
   const zoom = fs();   // Size: what you hear is read from the drawing as it appears
@@ -204,6 +223,7 @@ export function arrange() {
   });
   // Index events so density can thin them in a repeatable pattern
   for (const lane of lanes) { lane.events.sort((a, b) => a.ph - b.ph); lane.events.forEach((e, i) => e.idx = i); }
+  assignVoices(lanes);
   const drones = tonal ? S.filter(s => s.tool === 'ripple').slice(-3) : [];
   const overflow = dropped / Math.max(kept + dropped, 1e-6);
   const nSlots = clamp(n - MAP.modStart, 0, MAP.targets.length);

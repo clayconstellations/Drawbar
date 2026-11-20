@@ -9,7 +9,6 @@ import { MAP } from './maps.js';
 import { N } from './nodes.js';
 import { scaleMidi } from './pitch.js';
 import { FAMS as FAMS1, FAMS2, MODT } from './vocab.js';
-import { drumTrim } from './trim.js';
 const FAMS = FAMS1.concat(FAMS2);
 
 export let actx = null, noiseBuf = null;
@@ -127,18 +126,48 @@ export function buildAudio(ctx) {   // ctx: an offline context, for measuring lo
   [vo, wo, fo, N.tremOsc].forEach(o => o.start());
   N.drumVol = gain(1); N.drumVol.connect(N.mix);
   N.drumIn = gain(0.9); N.drumShape = actx.createWaveShaper(); N.drumShape.oversample = '2x'; N.drumFilt = filt('lowpass', 6000);
-  N.drumTrim = gain(1);   // per-map level trim, after the drive (see DRUM_TRIM in sound/trim.js)
-  N.drumIn.connect(N.drumShape).connect(N.drumFilt).connect(delay(0.015, 0.1)).connect(N.drumTrim).connect(N.drumVol);
+  N.drumIn.connect(N.drumShape).connect(N.drumFilt).connect(delay(0.015, 0.1)).connect(N.drumVol);
   N.drumRev = gain(0.14); N.drumVol.connect(N.drumRev).connect(N.revSend);
   N.toneVol = gain(1); N.toneVol.connect(N.melIn);
   N.linesBus = gain(0.7); N.linesBus.connect(N.toneVol);
   N.droneBus = gain(1); N.droneBus.connect(N.toneVol);
+  // ----- Vibe chain (v36): the map's targeted voices go through here instead of straight to the lines bus.
+  // In series, each with its own dry / wet: gentle saturation, a phaser, a lossy stage (band-limited, coarsely
+  // stepped, wavering like a low bit-rate file). From the end of the chain: pitch-shifted copies (an octave up or
+  // down, a fifth), a texture of tiny grains, and the beat glitcher. Shifters are only built when a map first needs one.
+  const stage = (src, build) => { const out = gain(1), dry = gain(1), wet = gain(0); src.connect(dry).connect(out); build(src).connect(wet).connect(out); return { out, dry, wet }; };
+  N.vibeIn = gain(1);
+  N.vSat = stage(N.vibeIn, src => { const pre = gain(2.2), ws = actx.createWaveShaper(), c = new Float32Array(1024); for (let i = 0; i < 1024; i++) c[i] = Math.tanh(2.2 * (i / 511.5 - 1)) / Math.tanh(2.2) * 0.6; ws.curve = c; ws.oversample = '2x'; src.connect(pre).connect(ws); return ws; });
+  N.vPh = stage(N.vSat.out, src => {
+    N.phAps = [0, 1, 2, 3].map(i => filt('allpass', 500 * (1 + i * 0.7), 0.7)); N.phLfo = osc('sine', 0.3); N.phDepth = gain(300);
+    N.phLfo.connect(N.phDepth); for (const ap of N.phAps) N.phDepth.connect(ap.frequency);
+    src.connect(N.phAps[0]); N.phAps[0].connect(N.phAps[1]).connect(N.phAps[2]).connect(N.phAps[3]); N.phLfo.start();
+    return N.phAps[3];
+  });
+  N.vLossy = stage(N.vPh.out, src => {
+    const lp = filt('lowpass', 5200, 0.9), d = delay(0.0012, 0.02), ws = actx.createWaveShaper(), c = new Float32Array(1024), hp = filt('highpass', 160), warb = gain(0.8);
+    for (let i = 0; i < 1024; i++) c[i] = Math.round((i / 511.5 - 1) * 14) / 14;
+    ws.curve = c;
+    const nz = noiseSrc(), nlp = filt('lowpass', 9, 0.7), nd = gain(0.012), ng = gain(12); nz.connect(nlp); nlp.connect(nd).connect(d.delayTime); nlp.connect(ng).connect(warb.gain); nz.start();
+    src.connect(lp).connect(d).connect(ws).connect(hp).connect(warb);
+    return warb;
+  });
+  N.vibeTap = N.vLossy.out;
+  N.vibeDry = gain(0.7); N.vibeTap.connect(N.vibeDry).connect(N.toneVol);   // 0.7: the lines bus's own level
+  N.sh = {};
+  N.texSend = gain(0); N.vibeTap.connect(N.texSend);
+  N.texOut = filt('lowpass', 7000); N.texOut.connect(gain(0.8)).connect(N.wet);
+  N.texTaps = [];
+  for (let i = 0; i < 4; i++) { const d = delay(0.1, 1), g = gain(0), p = panner((i % 2 ? 1 : -1) * (0.3 + 0.15 * i)); N.texSend.connect(d).connect(g).connect(p).connect(N.texOut); N.texTaps.push({ d, g }); }
+  N.glIn = gain(1); N.glD = delay(0.15, 1.5); N.glFb = gain(0); N.glWet = gain(0);
+  N.vibeTap.connect(N.glIn).connect(N.glD); N.glD.connect(N.glFb).connect(N.glD); N.glD.connect(N.glWet).connect(N.toneVol);
   N.fam = {};
   for (const f of FAMS) {
-    const inp = gain(1), lp = filt('lowpass', 18000), hs = actx.createBiquadFilter();
+    const inp = gain(1), lp = filt('lowpass', 18000), hs = actx.createBiquadFilter(), dry = gain(1), send = gain(0);
     hs.type = 'highshelf'; hs.frequency.value = 3000; hs.gain.value = 0;
-    inp.connect(lp).connect(hs).connect(f === 'drums' ? N.drumIn : f === 'drones' ? N.droneBus : N.linesBus);
-    N.fam[f] = { inp, lp, hs };
+    inp.connect(lp).connect(hs); hs.connect(dry).connect(f === 'drums' ? N.drumIn : f === 'drones' ? N.droneBus : N.linesBus);
+    if (f !== 'drums' && f !== 'drones') hs.connect(send).connect(N.vibeIn);
+    N.fam[f] = { inp, lp, hs, dry, send };
   }
   N.mods = {};
   for (const key of Object.keys(MODT)) {
@@ -153,6 +182,7 @@ export function applyTempoParams(tc = 0.25) {
   const t = actx.currentTime, beat = 60 / score.tempo, barSec = 4 * beat;
   N.dly.delayTime.setTargetAtTime(MAP.delayBeats * beat, t, tc);
   N.tremOsc.frequency.setTargetAtTime(1 / (MAP.tremBeats * beat), t, tc);
+  if (N.glD && MAP.vibe.glitch) N.glD.delayTime.setTargetAtTime(MAP.vibe.glitch.slice * beat, t, 0.02);
   for (const m of ARR.mods) N.mods[m.target].o.frequency.setTargetAtTime(1 / (m.rateBars * barSec), t, tc);
 }
 export function applyTone(tc) {
@@ -179,6 +209,24 @@ export function applySpace() {
   N.shimFb.gain.setTargetAtTime(0.16 + 0.42 * live.space, t, 0.05);
   N.smearLP.frequency.setTargetAtTime(2400 + 4200 * live.space, t, 0.05);
 }
+// A pitch shifter between two points, built the first time a map asks for it; returns its send gain
+function shifter(key, semi, from, to) {
+  if (!N.sh[key]) { const ps = pitchShifter(semi), send = gain(0), lp = filt('lowpass', 6000); from.connect(send).connect(ps.inp); ps.out.connect(lp).connect(to); N.sh[key] = send; }
+  return N.sh[key];
+}
+export function applyVibe(tc = 0.25) {
+  if (!audioReady || !N.vibeIn) return;
+  const V = MAP.vibe, t = actx.currentTime, set = (prm, v) => prm.setTargetAtTime(v, t, tc), tg = new Set(V.targets);
+  for (const f of FAMS) if (f !== 'drums' && f !== 'drones') { const on = tg.has(f); set(N.fam[f].send.gain, on ? 1 : 0); set(N.fam[f].dry.gain, on ? 0 : 1); }
+  set(N.vSat.wet.gain, V.sat * 0.9); set(N.vSat.dry.gain, 1 - V.sat * 0.75);
+  set(N.vPh.wet.gain, V.phaser); set(N.phLfo.frequency, V.phRate); set(N.phDepth.gain, V.phBase * 0.6); N.phAps.forEach((ap, i) => set(ap.frequency, V.phBase * (1 + i * 0.7)));
+  set(N.vLossy.wet.gain, V.lossy); set(N.vLossy.dry.gain, 1 - V.lossy);
+  for (const [key, semi] of [['up', 12], ['down', -12], ['fifth', 7]]) { const amt = V.harm ? V.harm[key] : 0; if (amt > 0 || N.sh['h' + key]) set(shifter('h' + key, semi, N.vibeTap, N.wet).gain, amt); }
+  // the granular delay's feedback goes through an octave shift, up or down, so repeats climb or sink
+  for (const dir of [1, -1]) { const amt = V.grainfb && V.grainfb.dir === dir ? V.grainfb.amt : 0; if (amt > 0 || N.sh['g' + dir]) set(shifter('g' + dir, 12 * dir, N.granOut, N.granSend).gain, amt); }
+  set(N.texSend.gain, V.texture);
+  if (!V.glitch) { set(N.glWet.gain, 0); set(N.glFb.gain, 0); set(N.glIn.gain, 1); set(N.vibeDry.gain, 0.7); }
+}
 export function applyAudio(tc = 0.25) {
   if (!audioReady || !ARR) return;
   const t = actx.currentTime, A = ARR.amt, P = ARR.P, set = (prm, v) => prm.setTargetAtTime(v, t, tc);
@@ -187,11 +235,11 @@ export function applyAudio(tc = 0.25) {
   set(N.melRev.gain, P.wet);
   set(N.dlySend.gain, 0.1 + A.delay * 0.45); N.dFbBase = dFb;
   set(N.tremDepth.gain, A.tremolo * 0.6); set(N.trem.gain, 1 - A.tremolo * 0.3);
-  set(N.vibDepth.gain, A.vibrato * 0.00016); set(N.wowDepth.gain, A.wow * 0.0011); set(N.flutDepth.gain, A.wow * 0.00004);
-  set(N.granSend.gain, A.granular * 0.6); set(N.shimSend.gain, A.shimmer * 0.45); set(N.smearSend.gain, A.smear * 0.55);
+  const V = MAP.vibe;   // tape (vibe): wow and flutter even where the map's own effects have none
+  set(N.vibDepth.gain, A.vibrato * 0.00016); set(N.wowDepth.gain, Math.max(A.wow * 0.0011, V.tape * 0.0008)); set(N.flutDepth.gain, Math.max(A.wow * 0.00004, V.tape * 0.00007));
+  set(N.granSend.gain, Math.max(A.granular * 0.6, V.grainfb ? 0.3 : 0)); set(N.shimSend.gain, A.shimmer * 0.45); set(N.smearSend.gain, A.smear * 0.55);
   set(N.thinWet.gain, A.thin * 2.2); set(N.thinDry.gain, 1 - A.thin * 0.65);
   set(N.drumFilt.frequency, MAP.dr.busLP);
-  set(N.drumTrim.gain, drumTrim(MAP.n));
   N.drumShape.curve = driveCurve(MAP.dr.drive);
   for (const key in N.mods) {
     const m = ARR.mods.find(x => x.target === key);
@@ -199,6 +247,7 @@ export function applyAudio(tc = 0.25) {
     if (key === 'delay.fb') depth = Math.max(0, Math.min(depth, 0.86 - Math.min(dFb * 1.45, 0.8)));
     set(N.mods[key].g.gain, depth);
   }
+  applyVibe(tc);
   applyTempoParams(tc); applyTone(tc === 0.25 ? undefined : tc); applySpace(); applyVolumes();
   syncDrones(tc); retuneThin(t);
 }

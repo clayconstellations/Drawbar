@@ -39,8 +39,26 @@ export function makeMap(n) {
   };
   const lineInst = { glow: pick(LINE_POOLS.glow), beads: pick(LINE_POOLS.beads), loop: pick(LINE_POOLS.loop) };
   if (synth) { lineInst.glow = synth; if (also) lineInst[also] = synth; }
+  // v36. Voices: the map's four instruments (the three it already had, topped up), no longer tied to a tool. Each
+  // note goes to the voice that scores highest for it (see assignVoices in arranger.js): vw holds, per voice, weights
+  // for what the stroke is like, how high the note is, and a slow wave along the pattern (vk, vph) that hands phrases
+  // from one voice to another.
+  const voices = [...new Set([lineInst.glow, lineInst.beads, lineInst.loop])];
+  for (const v of ['glass', 'wave', 'pad', 'bell', 'wood', 'pluck', 'piano'].map(v => [v, x()]).sort((a, b) => a[1] - b[1])) if (voices.length < 4 && !voices.includes(v[0])) voices.push(v[0]);
+  const vw = voices.map(() => Array.from({ length: 12 }, () => x() * 2 - 1)), vk = voices.map(() => xpick([1, 2, 2, 3, 4])), vph = voices.map(() => x());
+  // Vibe: effects that colour some of the voices (targets), each present in only some maps
+  const P = (p, a, b) => { const on = x() < p, v = X(a, b); return on ? v : 0; };
+  const nT = xpick([1, 2, 2, 3, 4, 4]), t0 = Math.floor(x() * 4);
+  const vibe = {
+    targets: voices.filter((_, i) => (i - t0 + 4) % 4 < nT),
+    tape: P(0.3, 0.4, 1), sat: P(0.3, 0.3, 0.8), phaser: P(0.25, 0.4, 0.9), phRate: X(0.08, 0.5), phBase: X(350, 1100), lossy: P(0.15, 0.4, 0.85),
+    harm: (() => { const on = x() < 0.25, up = P(0.6, 0.2, 0.45), down = P(0.4, 0.2, 0.4), fifth = P(0.4, 0.15, 0.35); return on ? { up: up || (down || fifth ? 0 : 0.3), down, fifth } : null; })(),
+    grainfb: (() => { const on = x() < 0.25, dir = x() < 0.5 ? 1 : -1, amt = X(0.25, 0.5); return on ? { dir, amt } : null; })(),
+    texture: P(0.2, 0.3, 0.7),
+    glitch: (() => { const on = x() < 0.2, p = X(0.08, 0.22), slice = xpick([0.25, 0.125, 0.125, 0.0625]), len = xpick([0.5, 1, 1, 2]); return on ? { p, slice, len } : null; })(),
+  };
   return {
-    n, fx, W, targets, density, kit, tone, synth, syn, dx,
+    n, fx, W, targets, density, kit, tone, synth, syn, dx, voices, vw, vk, vph, vibe,
     lineInst,
     canonInt: pick([2, 4, -3, 5]),
     low: 38 + Math.floor(r() * 10), span: 8 + Math.floor(r() * 9),
