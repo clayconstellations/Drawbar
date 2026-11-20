@@ -81,7 +81,7 @@ const capped = (mode, key, r) => {
   return key === 'copies' ? [r[0], Math.min(r[1], L.copies)] : key === 'tiles' ? [r[0], Math.min(r[1], L.tiles)] : key === 'turns' ? [r[0], Math.min(r[1], L.turns)] : r;
 };
 export const pm = () => score.mode;
-export let pk1, pk2, pk3, ptKnob;
+export let pk1, pk2, pk3, pk4, ptKnob;
 // The four sound knobs, the two level knobs, and the two pattern knobs
 export function initKnobs() {
   for (const [id, key, onChange, col] of [['knDensity', 'density', () => {}, '#62c6ff'], ['knProb', 'prob', () => {}, '#f58bc0'], ['knSpace', 'space', () => applySpace(), '#5fe6c0'], ['knTone', 'tone', () => applyTone(), '#ffd76b']]) {
@@ -113,6 +113,8 @@ export function initKnobs() {
   // Brush options (Glitch): the Variety knob, for whichever brush is in hand
   ptKnob = knob($('ptVary'), { range: () => [0, 100], smooth: true, plain: true, int: true, px: 150, def: () => { const k = optKind(MATS[ui.color]); return k ? OPTS[k].def.vary : 50; }, get: () => { const o = optsFor(optKind(MATS[ui.color])); return o ? o.vary : 50; }, set: v => { const o = optsFor(optKind(MATS[ui.color])); if (o) o.vary = v; }, fmt: v => Math.round(v), color: accent });
   // Size in kaleidoscope and tiles (in free mode the first knob is Size)
+  // Rate (Glitch): how fast Loop and Trace strokes go round. 100 = as drawn, 1 = slowest (see loopSlow in state.js)
+  pk4 = knob($('pk4'), { range: () => [1, 100], smooth: true, int: true, px: 200, def: () => 100, get: () => gv('lrate') == null ? 100 : gv('lrate'), set: v => { sv('lrate', v); rebuild(); }, fmt: v => Math.round(v), color: accent, onStart: checkpoint, onEnd: () => { rebuild(); syncUI(); } });
   pk3 = knob($('pk3'), {
     range: () => [0, 100], smooth: true, plain: true, int: true, px: 220, def: () => 50,
     get: () => gv('fscale'), set: v => { sv('fscale', v); redrawSoon(); },

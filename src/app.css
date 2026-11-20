@@ -547,3 +547,22 @@ html.light{filter:invert(1) hue-rotate(180deg)}
 .settings{max-height:calc(100% - 80px); overflow-y:auto}
 .midinote{margin:0; font-size:12.5px; color:var(--muted); line-height:1.4}
 .settings .srow .pick{max-width:170px}
+/* v39. Effect brushes (Glitch) in their own box beside the brushes; no divider line any more */
+#fxSwatches{display:flex; flex-wrap:nowrap; gap:0; background:var(--raise); border:1px solid var(--line); border-radius:9px; padding:3px}
+#fxSwatches[hidden]{display:none}
+#fxSwatches .sw{width:33px; height:33px; min-height:0; flex:0 0 33px; border:0; border-radius:6px; aspect-ratio:auto}
+#fxSwatches .sw::after{inset:4px; border-radius:3px; background:var(--c); background-color:transparent}
+#fxSwatches .sw[aria-pressed="true"]{background:var(--fg); border-color:transparent}
+.sw.fxfirst::before{display:none}
+#matGroup{gap:6px}
+@media (max-width:400px){ #matGroup{gap:4px} #swatches:not(.grid9), #fxSwatches{padding:2px} #swatches:not(.grid9) .sw, #fxSwatches .sw{width:30px; height:30px; flex-basis:30px} }
+@media (max-width:360px){ #swatches:not(.grid9) .sw, #fxSwatches .sw{width:28px; height:28px; flex-basis:28px} }
+/* The colour picker while an effect brush is in hand: effects have no colour */
+#colorGroup.dim{opacity:.25; pointer-events:none}
+/* The row under the brushes (effect, brush options) sits in the middle */
+.optrow{display:flex; justify-content:center; gap:12px}
+#optGroup{width:auto; flex:0 1 auto} #optGroup .row{width:auto; justify-content:center; gap:10px}
+.app.wide .optrow{align-items:center}
+/* Two knobs can share the top left corner's place (Rate in Glitch's plain canvas); only one shows at a time */
+.corner .kwrap[hidden]{display:none}
+.app.wide #matGroup{flex-direction:column}

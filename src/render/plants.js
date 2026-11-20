@@ -139,6 +139,14 @@ const HEADS = {
     pet(g.P.cupHi, 0, 0, R * 0.62, R * 1.62);
     pet(g.P.cupLine, 0, 0, R * 0.2, R * 1.2);
   },
+  // Sunflower: two rings of pointed petals round a big dark middle packed with seeds
+  sunflower(g, x, y, R, ang) {
+    const c = frame(x, y, ang)(R * 0.55, 0), rot = g.rnd() * TAU, n = 15 + Math.floor(g.rnd() * 4);
+    for (let k = 0; k < n; k++) leaf(g.P.petalLo, c, rot + (k + 0.5) * TAU / n, R * (0.98 + 0.1 * g.rnd()), R * 0.2);
+    for (let k = 0; k < n; k++) leaf(g.P.petal, c, rot + k * TAU / n, R * (0.86 + 0.1 * g.rnd()), R * 0.19);
+    circ(g.P.ctr, c, R * 0.46); circ(g.P.ctrHi, c, R * 0.3);
+    for (let k = 1; k < 26; k++) { const a = k * 2.39996, d = R * 0.42 * Math.sqrt(k / 26); circ(g.P.dot, [c[0] + Math.cos(a + rot) * d, c[1] + Math.sin(a + rot) * d], R * 0.035); }
+  },
   // Blossom: five round petals with a notch of light in each, a dark eye and a spray of stamens
   blossom(g, x, y, R, ang) {
     const c = frame(x, y, ang)(R * 0.55, 0), rot = g.rnd() * TAU;
@@ -180,6 +188,7 @@ const SPROUT = {
   // v38 vine flowers. leaf: a leaf on the vine opposite each flower, this many half-widths long
   daisy: { gap: [1.9, 2.8], len: [0.7, 1.6], R: [0.85, 1.25], w: 0.09, side: 'alt', vine: 0.13, leaf: 1.2 },
   bluebell: { gap: [2.2, 3.2], len: [0.5, 1.0], R: [1.0, 1.4], w: 0.08, side: 'alt', vine: 0.12, leaf: 1.5 },
+  sunflower: { gap: [2.5, 3.5], len: [0.9, 1.8], R: [1.0, 1.4], w: 0.13, side: 'alt', vine: 0.16, leaf: 1.9 },
   tulip: { gap: [1.7, 2.6], len: [0.9, 1.9], R: [0.7, 1.0], w: 0.1, side: 'alt', vine: 0.14, leaf: 1.7 },
   blossom: { gap: [1.6, 2.4], len: [0.5, 1.2], R: [0.8, 1.15], w: 0.09, side: 'alt', vine: 0.15, leaf: 0.9 },
   marigold: { gap: [2.0, 2.9], len: [0.6, 1.3], R: [0.85, 1.2], w: 0.1, side: 'alt', vine: 0.14, leaf: 1.3 },

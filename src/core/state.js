@@ -1,5 +1,5 @@
 // State: score (everything saved with a piece), mix (the four macro knobs), ui, prefs, undo/redo
-export const score = { mode: 'kaleido', copies: 4, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, timing: 'clocked', inst: 'both', world: 'classic', pixel: false, fx: 'smear', map: 417, tempo: 92, key: 2, scale: 2, mods: {}, strokes: [] };
+export const score = { mode: 'kaleido', copies: 4, spiral: 0, tiles: 3, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, timing: 'clocked', inst: 'both', world: 'classic', pixel: false, fx: 'smear', lrate: 100, map: 417, tempo: 92, key: 2, scale: 2, mods: {}, strokes: [] };
 export const MIX_DEF = { density: 1, prob: 1, space: 0.5, tone: 0.7 };
 export const mix = { ...MIX_DEF };
 // Modulation (core/mod.js). live: the sound knobs as they are right now (the knob's own value, moved by its modulator);
@@ -19,9 +19,15 @@ let nextId = 1;
 export const takeId = () => nextId++;
 export const seeId = id => { nextId = Math.max(nextId, id + 1); };
 export const undoStack = [], redoStack = [];
-export const SET_KEYS = ['map', 'key', 'scale', 'tempo', 'mode', 'copies', 'spiral', 'tiles', 'turns', 'mirror', 'fscale', 'frot', 'fmirror', 'timing', 'inst', 'world', 'pixel', 'fx', 'mods'];
+export const SET_KEYS = ['map', 'key', 'scale', 'tempo', 'mode', 'copies', 'spiral', 'tiles', 'turns', 'mirror', 'fscale', 'frot', 'fmirror', 'timing', 'inst', 'world', 'pixel', 'fx', 'lrate', 'mods'];
 export const snap = () => ({
   set: Object.fromEntries(SET_KEYS.map(k => [k, k === 'mods' ? JSON.parse(JSON.stringify(score.mods || {})) : gv(k)])),
   strokes: score.strokes.map(s => ({ id: s.id, tool: s.tool, color: s.color, size: s.size, fx: s.fx, tint: s.tint, head: s.head, pt: s.pt, seed: s.seed, L0: s.L0, pts: s.pts.map(p => p.slice()), start: s.start, startBeat: s.startBeat })),
 });
 export function checkpoint() { undoStack.push(snap()); redoStack.length = 0; if (undoStack.length > 120) undoStack.shift(); }
+
+// Loop rate (Glitch, v39): score.lrate runs 100 (as drawn) down to 1 (slowest). How many times longer a loop's trip
+// takes: with clocked timing it moves in musical steps (1.5, 2, 3, 4, 6, 8 times), so slowed loops still lock to the
+// beat and to each other; with hand timing it slides smoothly from 1 to 8.
+const SLOW = [1, 1.5, 2, 3, 4, 6, 8];
+export const loopSlow = () => { const v = Math.max(1, Math.min(100, score.lrate == null ? 100 : score.lrate)), u = (100 - v) / 99; return score.timing === 'clocked' ? SLOW[Math.round(u * 6)] : Math.pow(8, u); };

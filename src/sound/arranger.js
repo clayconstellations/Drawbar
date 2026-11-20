@@ -2,7 +2,7 @@
 import { MATS, toneIdx } from '../styles/index.js';
 import { COPIES, cycleBars, cycleBeats, fs, kCopies, mirrored, patternAmount, rawH, sPhase, strokePhase, tileGeo } from '../canvas/index.js';
 import { TAU, clamp, hashFrac, mod, th } from '../core/math.js';
-import { score } from '../core/state.js';
+import { loopSlow, score } from '../core/state.js';
 import { animEventIdx, sampleArc } from '../core/stroke.js';
 import { TOOL } from '../core/tools.js';
 import { HIDDEN } from '../render/compose.js';
@@ -205,9 +205,10 @@ export function arrange() {
   if (tonal) loops.forEach((s, j) => {
     // Each loop keeps its own length and its own start, so loops drift against each other instead of restarting
     // together. Clocked: both are rounded to the nearest 16th note (a quarter of a beat).
-    s._Pb = Math.max(0.5, Math.round(s._dur * score.tempo / 60 * 4) / 4);
-    const period = clocked ? s._Pb : s._dur, base = clocked ? 'beat' : 'sec', origin = clocked ? s.startBeat : s.start;
-    const steps = clocked ? s._Pb * 4 : Math.max(8, Math.round(s._dur * 8)), rec = recOf(s);
+    const slow = world().legacy ? 1 : loopSlow();   // Rate: the loop's trip takes this many times longer
+    s._Pb = Math.max(0.5, Math.round(s._dur * slow * score.tempo / 60 * 4) / 4);
+    const period = clocked ? s._Pb : s._dur * slow, base = clocked ? 'beat' : 'sec', origin = clocked ? s.startBeat : s.start;
+    const steps = clocked ? s._Pb * 4 : Math.max(8, Math.round(s._dur * slow * 8)), rec = recOf(s);
     const cands = animEventIdx(s).map(i => {
       const pt = s.pts[i], sn = Math.min(s._sp[i] / 2.2, 1);
       return { sx: pt[0], sy: pt[1], ph: pt[2] / s._dur, h: relH(rawH(pt[0], pt[1])), w: 0.4 + 0.5 * (1 - sn), s, rec, m: false, pan: clamp(pt[0] * zoom, -1, 1) * 0.6 };

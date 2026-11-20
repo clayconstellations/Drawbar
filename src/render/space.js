@@ -270,7 +270,6 @@ export function drawSpaceBg(ctx, W, H) {
 // Film grain over the whole view (Space). One pattern fill per
 // frame. The grain holds still and there are no scratches or specks (v30: both removed at the owner's request).
 let grain = null;
-let grainB = null, mixC = null, mixX = null;
 export function drawFilm(ctx, W, H, now, still) {
   if (!grain) {
     grain = document.createElement('canvas'); grain.width = grain.height = 256;
@@ -278,31 +277,12 @@ export function drawFilm(ctx, W, H, now, still) {
     for (let i = 0; i < d.length; i += 4) { const v = r(), lum = v < 0.5 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = lum; d[i + 3] = Math.floor(Math.pow(Math.abs(v - 0.5) * 2, 2.2) * 34); }
     g.putImageData(im, 0, 0);
   }
-  // Two grains, a fine one and a coarser, softer one, each drifting very slowly its own way and swelling and fading
-  // against the other (v38). They are mixed into one small tile each frame (eight small copies), and the screen is
-  // filled from that once: two full-screen fills cost a frame in two in the test. No sheet sits still and the two
-  // never line up the same way twice, so the eye finds no fixed layer; nothing jumps, so it does not read as running
-  // film either. The grain grows with Size.
-  if (!grainB) {
-    grainB = document.createElement('canvas'); grainB.width = grainB.height = 256;
-    const small = document.createElement('canvas'); small.width = small.height = 128;
-    const g = small.getContext('2d'), r = mulberry32(3851), im = g.createImageData(128, 128), d = im.data;
-    for (let i = 0; i < d.length; i += 4) { const v = r(), lum = v < 0.5 ? 0 : 255; d[i] = d[i + 1] = d[i + 2] = lum; d[i + 3] = Math.floor(Math.pow(Math.abs(v - 0.5) * 2, 1.8) * 46); }
-    g.putImageData(im, 0, 0);
-    const gb = grainB.getContext('2d'); gb.imageSmoothingEnabled = true;
-    for (const [ox, oy] of [[0, 0], [-256, 0], [0, -256], [-256, -256]]) gb.drawImage(small, ox + 0.5, oy + 0.5, 256, 256);   // half a pixel over, wrapped, so it still tiles
-    mixC = document.createElement('canvas'); mixC.width = mixC.height = 256; mixX = mixC.getContext('2d');
-  }
-  const sc = Math.max(1, Math.round(Math.max(W, H) / 700)) * fs(), t = still ? 0 : now / 1000, breathe = 0.5 + 0.5 * Math.sin(t * 0.21);
-  mixX.clearRect(0, 0, 256, 256);
-  for (const [img, vx, vy, a, whole] of [[grain, 2.1, 1.2, 0.6 + 0.4 * breathe, true], [grainB, -1.3, 1.7, 1 - 0.55 * breathe, false]]) {
-    let ox = ((t * vx) % 256 + 256) % 256, oy = ((t * vy) % 256 + 256) % 256;
-    if (whole) { ox = Math.floor(ox); oy = Math.floor(oy); }   // the fine grain moves by whole pixels, so it stays crisp
-    mixX.globalAlpha = a;
-    for (const [dx, dy] of [[0, 0], [-256, 0], [0, -256], [-256, -256]]) mixX.drawImage(img, ox + dx, oy + dy);
-  }
-  const pat = ctx.createPattern(mixC, 'repeat');
-  pat.setTransform(new DOMMatrix([sc, 0, 0, sc, 0, 0]));
+  // Film grain again (v39): the sheet lands somewhere new 12 times a second, turned or flipped, so no fixed layer and
+  // no tile edge can be picked out. No scratches or specks. (v38's two slowly drifting grains still read as a still
+  // sheet, and its tiling showed.) One pattern fill per frame. It holds still with reduced motion. Grows with Size.
+  const sc = Math.max(1, Math.round(Math.max(W, H) / 700)) * fs(), r = mulberry32(still ? 7 : 9000 + Math.floor(now / 1000 * 12));
+  const q = Math.floor(r() * 4), fx = r() < 0.5 ? -1 : 1, pat = ctx.createPattern(grain, 'repeat');
+  pat.setTransform(new DOMMatrix().translate(r() * 256 * sc, r() * 256 * sc).rotate(q * 90).scale(sc * fx, sc));
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H);
   // (No shading toward the edge: v30's blended through a warm grey on its way to black, which showed as a bright ring.)

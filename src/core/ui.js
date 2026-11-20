@@ -3,7 +3,7 @@ import { MODES, mirrored } from '../canvas/index.js';
 import { endPreview, keepClip, page, preview, showPage } from './clips.js';
 import { $ } from './dom.js';
 import { openExport } from './export.js';
-import { P1, P2, mixKnobs, pk1, pk2, pk3, pm, ptKnob } from './knobs.js';
+import { P1, P2, mixKnobs, pk1, pk2, pk3, pk4, pm, ptKnob } from './knobs.js';
 import { OPTS, optKind, optsFor } from './brushopts.js';
 import { isVisual, layout } from './layout.js';
 import { anim, randomize, rebuild, restore, setMap, setTempo } from './settings.js';
@@ -111,6 +111,8 @@ export function syncUI() {
   // Colour picker (tabs with a palette): rebuilt when the tab changes; brush swatches are shown in the colour picked
   const cg = $('colors');
   $('colorGroup').classList.toggle('off', !w.colors);
+  $('colorGroup').classList.toggle('dim', ui.tool !== 'erase' && !!MATS[ui.color].under);   // effect brushes have no colour of their own
+  $('fxSwatches').hidden = !w.matIdx.some(i => MATS[i].under);
   // A style whose brushes are plain colours (Geometric) shows them in the same 3 x 3 grid as the colour picker
   $('swatches').classList.toggle('grid9', !!(w.options && w.options.gridMats));
   if (w.colors) {
@@ -122,7 +124,7 @@ export function syncUI() {
     for (const b of cg.children) b.setAttribute('aria-pressed', String(b.dataset.c === ui.tint));
   }
   // Brushes show in the tab's own order (w.mats), whatever their place in MATS
-  MATS.forEach((M, i) => { const b = $('sw-' + i); b.setAttribute('aria-pressed', String(ui.color === i)); if (!b.hidden) { b.style.order = w.matIdx.indexOf(i); b.style.setProperty('--c', w.colors && M.swatchFor ? M.swatchFor(ui.tint) : M.swatch); b.title = M.label && w.colors ? M.label : M.name; b.setAttribute('aria-label', b.title); } });
+  MATS.forEach((M, i) => { const b = $('sw-' + i); b.setAttribute('aria-pressed', String(ui.color === i)); if (!b.hidden) { b.style.order = w.matIdx.indexOf(i); b.style.setProperty('--c', w.colors && M.swatchFor ? M.swatchFor(M.under ? '#aeb6d6' : ui.tint) : M.swatch); b.title = M.label && w.colors ? M.label : M.name; b.setAttribute('aria-label', b.title); } });
   // The accent follows the colour in hand, unless that is too dark to see on the dark panel
   document.documentElement.style.setProperty('--ink', accent());
   if (!anim) mapInput.value = String(score.map).padStart(3, '0');
@@ -130,7 +132,12 @@ export function syncUI() {
   $('undoBtn').disabled = !undoStack.length;
   $('redoBtn').disabled = !redoStack.length;
   $('clearBtn').disabled = !score.strokes.length;
-  $('pk3w').hidden = free; pk1.draw(); pk2.draw(); pk3.draw(); for (const key in mixKnobs) mixKnobs[key].draw();
+  // Size keeps its corner (bottom left) in every pattern (v39: in the plain canvas it used to sit top left). The top
+  // left corner is then free there; in Glitch it holds Rate, the speed of Loop and Trace strokes. (With Tiles all four
+  // corners are taken, so Rate is not shown; its setting still applies.)
+  $('pk3w').hidden = false; $('pk1w').hidden = free;
+  $('pk4w').hidden = !(free && w.tools.includes('loop'));
+  pk1.draw(); pk2.draw(); pk3.draw(); pk4.draw(); for (const key in mixKnobs) mixKnobs[key].draw();
   drawSizeBar(); syncSound(); syncMod();
 }
 // All the buttons, the tempo box, the map number and preferences
@@ -168,7 +175,7 @@ export function initControls() {
     const b = document.createElement('button');
     b.className = MATS[i].under ? 'sw fxsw' : 'sw'; b.id = 'sw-' + i; b.style.setProperty('--c', MATS[i].swatch); b.setAttribute('aria-label', MATS[i].name); b.title = MATS[i].name;
     b.addEventListener('click', () => { ui.color = i; if (ui.tool === 'erase') ui.tool = 'glow'; syncUI(); });
-    $('swatches').appendChild(b);
+    (MATS[i].under ? $('fxSwatches') : $('swatches')).appendChild(b);   // effect brushes sit in a box of their own
   });
   // Pixel toggle (Geometric): sits after the colours
   const pix = document.createElement('button');

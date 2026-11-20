@@ -43,4 +43,7 @@ export const vineFlowers = [
     'radial-gradient(circle, #c2255c 0 12%, transparent 14%), radial-gradient(circle at 50% 24%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 75% 42%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 66% 72%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 34% 72%, #ff8fc4 0 20%, transparent 22%), radial-gradient(circle at 25% 42%, #ff8fc4 0 20%, transparent 22%), #160b33'),
   plant('Marigolds', 'marigold', '#4f9a3a', '#ff9d2e', [['leaf', '#6dbb4a'], ['ruff', '#e8590c'], ['petal', '#ff922b'], ['petalHi', '#ffd43b'], ['ctr', '#a63c06']],
     'radial-gradient(circle, #ffd43b 0 20%, #ff922b 22% 40%, #e8590c 42% 58%, #160b33 62%)'),
+  // v39 (appended after Marigolds: the Tulips slot above stays, so drawings made with it still open)
+  plant('Sunflowers', 'sunflower', '#3f8f3a', '#ffd43b', [['leaf', '#58b34a'], ['petalLo', '#f08c00'], ['petal', '#ffd43b'], ['ctr', '#5c3414'], ['ctrHi', '#7a4a1e'], ['dot', '#2e1a0a']],
+    'radial-gradient(circle, #5c3414 0 26%, transparent 28%), repeating-conic-gradient(#ffd43b 0 5%, #f08c00 5% 6.25%), #160b33'),
 ];

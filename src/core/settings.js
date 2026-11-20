@@ -37,6 +37,7 @@ export function applySettings(st, tc) {
   if (st.map !== score.map || MAP.n !== st.map) { score.map = st.map; useMap(st.map); }
   for (const k of SET_KEYS) if (k !== 'map' && k !== 'tempo' && k !== 'mods' && st[k] !== undefined) score[k] = st[k];
   // Modulators come as a copy (undo and clips must not share them); the settings above are the knobs' own values
+  if (st.lrate === undefined) score.lrate = 100;   // pieces from before the Rate knob run at full speed
   if (st.mods !== undefined) score.mods = JSON.parse(JSON.stringify(st.mods || {}));
   for (const k in modBase) delete modBase[k];
   // Clips from before Lattice and Tessellation became Tiles

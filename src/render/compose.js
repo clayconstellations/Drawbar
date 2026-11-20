@@ -8,7 +8,7 @@ import { SQ3, TAU, clamp, mod } from '../core/math.js';
 import { anim, hiddenChanged, rebuild, stepRandomize } from '../core/settings.js';
 import { modTick } from '../core/mod.js';
 import { applySpace, applyTone } from '../sound/graph.js';
-import { score } from '../core/state.js';
+import { loopSlow, score } from '../core/state.js';
 import { BEAD_R, NEON_W, prepare } from '../core/stroke.js';
 import { drawUpright } from './space.js';
 import { TOOL } from '../core/tools.js';
@@ -357,7 +357,7 @@ function animBody(M, xs, ys, w, i1, sz, s, head) {
 export function drawAnim(X, s, S, B) {
   const M = MATS[s.color], n = s.pts.length;
   if (s.tool === 'loop') {
-    const ph = score.timing === 'clocked' ? mod((B - s.startBeat) / (s._Pb || 4), 1) : mod((S - s.start) / s._dur, 1), T = ph * s._dur;
+    const ph = score.timing === 'clocked' ? mod((B - s.startBeat) / (s._Pb || 4), 1) : mod((S - s.start) / (s._dur * loopSlow()), 1), T = ph * s._dur;
     let iT = 0;
     while (iT < n - 1 && s.pts[iT + 1][2] <= T) iT++;
     if (iT < 1) return null;
@@ -396,6 +396,16 @@ export function drawPreview(X, S, B, now) {
       prepare(t); t._pv = true; cur._pv = t; cur._pvN = cur.pts.length;
     }
     const t = cur._pv;
+    if (M.under) {
+      // An effect brush shows nothing over empty canvas, so while it is being drawn its patch is marked: a faint
+      // band as wide as the patch, with a brighter edge. It goes when you lift.
+      const path = new Path2D(), bb = [1e9, 1e9, -1e9, -1e9], lw = NEON_W * 2 * sz * 3;
+      path.moveTo(cur.pts[0][0], cur.pts[0][1]);
+      for (const q of cur.pts) { path.lineTo(q[0], q[1]); bb[0] = Math.min(bb[0], q[0]); bb[1] = Math.min(bb[1], q[1]); bb[2] = Math.max(bb[2], q[0]); bb[3] = Math.max(bb[3], q[1]); }
+      bb[0] -= lw; bb[1] -= lw; bb[2] += lw; bb[3] += lw;
+      X.lineCap = 'round'; X.lineJoin = 'round';
+      forCopies(X, () => { X.strokeStyle = 'rgba(238,242,255,0.34)'; X.lineWidth = lw; X.stroke(path); X.strokeStyle = 'rgba(10,12,24,0.78)'; X.lineWidth = Math.max(lw - 0.012, lw * 0.8); X.stroke(path); X.strokeStyle = 'rgba(238,242,255,0.07)'; X.stroke(path); }, { _bb: bb });
+    }
     if (M.live) { drawLive(X, t, S, B, now, NOPULSE); return; }
     if (t._shape) { drawCopies(X, t, 0, Infinity, PRE); return; }
   }

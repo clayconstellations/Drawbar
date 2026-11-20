@@ -11,7 +11,7 @@
 // All of it is thin lines or small image copies, in the drawing's own space (so copies and tiles just work). Each
 // stroke pulses with its own notes (pulseFrame), and drum hits nudge them all. Visual only.
 import { TAU, hash32, mulberry32, mod, clamp } from '../core/math.js';
-import { score } from '../core/state.js';
+import { loopSlow, score } from '../core/state.js';
 import { NEON_W, speedN } from '../core/stroke.js';
 import { buildShape, capsAlong } from './shapes.js';
 import { forCopies } from '../canvas/index.js';
@@ -87,7 +87,7 @@ function setup(s) {
 const headSpan = s => Math.max(0.25, s._dur * 0.14);
 function reveal(s, S, B) {
   if (s.tool !== 'loop') return Infinity;
-  const ph = score.timing === 'clocked' ? mod((B - s.startBeat) / (s._Pb || 4), 1) : mod((S - s.start) / s._dur, 1);
+  const ph = score.timing === 'clocked' ? mod((B - s.startBeat) / (s._Pb || 4), 1) : mod((S - s.start) / (s._dur * loopSlow()), 1);
   return ph * s._dur;
 }
 function sway(s, i, S) {
