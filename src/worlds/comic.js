@@ -12,5 +12,5 @@ export default {
   modes: ['free', 'kaleido', 'tiles'],
   limits: { strokes: 30, copies: 6, tiles: 4, turns: 3, rotate: true },
   start: { mode: 'free', copies: 6, spiral: 0, tiles: 4, turns: 1, mirror: true, fscale: 50, frot: false, fmirror: false, tool: 'glow', color: 'Comic red' },
-  render: { fixedLight: true, sprites: true, smooth: true },   // smooth: lines are always lightly smoothed here (v39), as in Materials: corners made kinks in the tubes
+  render: { fixedLight: true, sprites: true, smooth: 0.35 },   // smooth: lines are always lightly smoothed here (v39), as in Materials: corners made kinks in the tubes
 };

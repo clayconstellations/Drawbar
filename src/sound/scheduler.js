@@ -11,6 +11,7 @@ import { MAP } from './maps.js';
 import { N } from './nodes.js';
 import { lineNote } from './pitch.js';
 import { TOOL } from '../core/tools.js';
+import { world } from '../worlds/index.js';
 import { notePulse } from './pulse.js';
 import { midiClock, midiDrum, midiKnobs, midiNote } from './midi.js';
 
@@ -28,7 +29,7 @@ export function playEvent(lane, ev, S) {
     ev = { ...ev, shift: (ev.shift || 0) + Math.round(Math.max(MAP.hy, 0.35) * (ev.y - ev._ry) / 2 * fs() * MAP.span * MAP.rot.pitch), pan: lerp(ev.pan, clamp(ev._rx * fs(), -1, 1) * 0.6, MAP.rot.pan) };
   }
   const bright = ARR.P.bright * MAP.colorMod[toneIdx(ev.s) % 7].bright * toneEnv(inst);
-  const hz = fold(mtof(lineNote(ev, inst)));
+  const hz = fold(mtof(lineNote(ev, inst, beatAt(S))));   // the beat decides which notes are in play (maps with active notes)
   midiNote(ev.vi || 0, 69 + 12 * Math.log2(hz / 440), ev.w, t, dur);   // the same pitch the built-in voice plays, on that voice's channel
   voice(inst, hz, t, ev.w * (inst === 'pad' ? 0.9 : 0.85), inst === 'pad' ? Math.max(dur, 1.2) : dur, ev.pan, bright, ev.s);
 }
@@ -93,16 +94,24 @@ export function schedule() {
   const B0 = beatAt(S0), B1 = beatAt(S1);
   scheduleGrains(S0, S1); scheduleTexture(S0, S1); scheduleGlitch(B0, B1);
   midiClock(B0, B1, b => secAt(b) + pausedTotal - audioOffset); midiKnobs();
+  const VY = world().legacy ? null : MAP.vary;
   LANES.forEach((lane, li) => {
     const P = lane.period, n = lane.events.length;
     if (!(P > 0) || !n) return;
     const keepK = Math.round(live.density * n);
     const beat = lane.base === 'beat', lo = (beat ? B0 : S0) - lane.origin, hi = (beat ? B1 : S1) - lane.origin;
-    for (let c = Math.floor(lo / P) - 1; c <= Math.floor(hi / P); c++) for (const ev of lane.events) {
+    for (let c = Math.floor(lo / P) - 1; c <= Math.floor(hi / P); c++) for (const ev0 of lane.events) {
+      let ev = ev0;
       const tt = (c + ev.ph) * P;
       if (tt < lo || tt >= hi) continue;
       // Density skips notes in a fixed, evenly spread pattern; probability rolls a repeatable die per note per cycle
       if (ev.cyc && mod(c, ev.cyc[0]) !== ev.cyc[1]) continue;   // sounds only on some turns of the pattern (snare rolls)
+      if (ev.not && mod(c, ev.not[0]) === ev.not[1]) continue;   // rests on one turn of a longer drum form
+      // Phrase variation (some maps): on every second, third or fourth turn a few notes move a step, jump an octave or rest
+      if (VY && lane.role !== 'drums' && mod(c, VY.every) === VY.every - 1) {
+        const u = hashFrac(MAP.n, ev.s.id, ev.idx, c, 311);
+        if (u < VY.p) { const k = Math.floor(u / VY.p * 4); if (k === 0) continue; ev = { ...ev, shift: (ev.shift || 0) + (k === 1 ? 1 : k === 2 ? -1 : 0), oct: (ev.oct || 0) + (k === 3 ? 1 : 0) }; }
+      }
       if (keepK < n && !euclid(keepK, n, ev.idx, 0)) continue;
       if (live.prob < 1 && hashFrac(ev.s.id, ev.idx, c, li, 913) >= live.prob) continue;
       let Sev = beat ? secAt(tt + lane.origin) : tt + lane.origin;

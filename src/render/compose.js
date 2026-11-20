@@ -397,14 +397,16 @@ export function drawPreview(X, S, B, now) {
     }
     const t = cur._pv;
     if (M.under) {
-      // An effect brush shows nothing over empty canvas, so while it is being drawn its patch is marked: a faint
-      // band as wide as the patch, with a brighter edge. It goes when you lift.
+      // An effect brush shows nothing over empty canvas, so while it is being drawn its patch is marked: a pale
+      // band as wide as the patch with a sheen sliding across it (no outline). It goes when you lift.
       const path = new Path2D(), bb = [1e9, 1e9, -1e9, -1e9], lw = NEON_W * 2 * sz * 3;
       path.moveTo(cur.pts[0][0], cur.pts[0][1]);
       for (const q of cur.pts) { path.lineTo(q[0], q[1]); bb[0] = Math.min(bb[0], q[0]); bb[1] = Math.min(bb[1], q[1]); bb[2] = Math.max(bb[2], q[0]); bb[3] = Math.max(bb[3], q[1]); }
       bb[0] -= lw; bb[1] -= lw; bb[2] += lw; bb[3] += lw;
       X.lineCap = 'round'; X.lineJoin = 'round';
-      forCopies(X, () => { X.strokeStyle = 'rgba(238,242,255,0.34)'; X.lineWidth = lw; X.stroke(path); X.strokeStyle = 'rgba(10,12,24,0.78)'; X.lineWidth = Math.max(lw - 0.012, lw * 0.8); X.stroke(path); X.strokeStyle = 'rgba(238,242,255,0.07)'; X.stroke(path); }, { _bb: bb });
+      const ph = (now / 1400) % 1, gr = X.createLinearGradient(-1.6 + ph * 3.2, -1.6 + ph * 3.2, -0.6 + ph * 3.2, -0.6 + ph * 3.2);
+      gr.addColorStop(0, 'rgba(238,242,255,0.16)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.4)'); gr.addColorStop(1, 'rgba(238,242,255,0.16)');
+      forCopies(X, () => { X.strokeStyle = gr; X.lineWidth = lw; X.stroke(path); }, { _bb: bb });
     }
     if (M.live) { drawLive(X, t, S, B, now, NOPULSE); return; }
     if (t._shape) { drawCopies(X, t, 0, Infinity, PRE); return; }

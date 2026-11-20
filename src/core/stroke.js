@@ -27,10 +27,10 @@ export function resample(pts, sp) {
   else out[out.length - 1] = [tail[0], tail[1], last[2], last[3]];
   return out;
 }
-export function smoothStroke(pts, sz) {
+export function smoothStroke(pts, sz, str = 1) {   // str: a style's built-in smoothing can be partial (Comic, v40)
   // Heavier smoothing for bigger brushes, but never enough to melt a short mark
   const r = resample(pts, 0.006), len = 0.006 * (r.length - 1);
-  const passes = Math.round(clamp(Math.min(10 + 4 * sz, 2 * Math.pow(len / 7 / 0.006, 2)), 2, 40));
+  const passes = Math.max(1, Math.round(clamp(Math.min(10 + 4 * sz, 2 * Math.pow(len / 7 / 0.006, 2)), 2, 40) * str));
   return smoothPts(r, passes);
 }
 export function smoothPts(p, passes) {

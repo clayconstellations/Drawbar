@@ -62,7 +62,7 @@ export function makeMap(n) {
   const y = mulberry32(hash32(n, 0x5e38)), dOn = y() < 0.2, yd = y(), yr = y(), yv = y(), ya = y(), chain = vibe.sat > 0 || vibe.phaser > 0 || vibe.lossy > 0 || !!vibe.glitch;
   const dfx = { delay: dOn && yd < 0.5 ? 0.2 + 0.25 * ya : 0, room: dOn && yr < 0.4 ? 0.2 + 0.25 * ya : 0, vibe: dOn && chain && yv < 0.6 ? 0.5 + 0.4 * ya : 0 };
   if (dOn && !dfx.delay && !dfx.room && !dfx.vibe) dfx.delay = 0.2 + 0.25 * ya;
-  return { dfx,
+  const out = { dfx,
     n, fx, W, targets, density, kit, tone, synth, syn, dx, voices, vw, vk, vph, vibe,
     lineInst,
     canonInt: pick([2, 4, -3, 5]),
@@ -88,6 +88,26 @@ export function makeMap(n) {
       return { pitch: Q(0.3, 1.3), pan: Q(0.15, 0.45), gate: q() < 0.35 ? -2 : Q(-0.8, -0.2), gateA: Q(0, TAU), swing: Q(0, 0.6), fx: [[fxKeys[a], Q(0, TAU), Q(0.3, 0.7)], [fxKeys[b], Q(0, TAU), Q(0.2, 0.5)]] };
     })(),
   };
+  // v40: change over time, from a generator of its own (nothing older moves).
+  //   harm:  "active notes". Only in maps most likely to settle into one short loop (few effect sweeps, none of the
+  //          effects that build on themselves, plain drums). The piece moves through a few steps, each lasting 2 or 4
+  //          bars; in each step only some of the scale's notes are in play (never fewer than 3, sometimes all of
+  //          them) and a note outside the set moves to the nearest one inside it. The scale itself never changes.
+  //          A step is stored as two fractions (where its notes start, how many there are) and worked out for
+  //          whatever scale is chosen (see activeDeg in pitch.js).
+  //   vary:  phrase variation: on some turns of a phrase a few notes move to a neighbour, jump an octave or rest
+  //   form:  a longer drum form (8 or 16 bars): a fill into the turn, a bar or two with kick and snare out, or both
+  const z = mulberry32(hash32(n, 0x5e39)), zpick = a => a[Math.floor(z() * a.length)];
+  const loopy = (out.modStart >= 3 ? 1 : 0) + (!vibe.glitch && !vibe.texture ? 1 : 0) + (!vibe.grainfb && !vibe.harm ? 1 : 0) + (!dx.hatK && !dx.roll ? 1 : 0) + (density < 0.6 ? 1 : 0);
+  const hSteps = Array.from({ length: zpick([3, 4, 4, 6, 8]) }, (_, i) => ({ r: z(), size: z() < 0.25 ? 1 : z() * 0.8 })), hBars = zpick([2, 2, 4]);
+  hSteps[0].r = 0;   // the first step is built on the scale's own first note
+  out.loopy = loopy;
+  out.harm = loopy >= 4 ? { steps: hSteps, bars: hBars } : null;
+  const vOn = z() < 0.3, vp = 0.12 + 0.2 * z(), vEvery = zpick([2, 2, 3, 4]);
+  out.vary = vOn ? { p: vp, every: vEvery } : null;
+  const fOn = z() < 0.35, fN = zpick([4, 4, 8]), fFill = z() < 0.7, fDrop = z() < 0.5, fPat = Math.floor(z() * 4096);
+  out.form = fOn ? { n: fN, fill: fFill || !fDrop, drop: fDrop, pat: fPat } : null;
+  return out;
 }
 export function applyKeyScale() { MAP.root = score.key; MAP.scale = SCALE_DEFS[score.scale]; }
 export let MAP = makeMap(score.map);

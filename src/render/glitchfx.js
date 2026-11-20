@@ -11,7 +11,7 @@
 // All of it is thin lines or small image copies, in the drawing's own space (so copies and tiles just work). Each
 // stroke pulses with its own notes (pulseFrame), and drum hits nudge them all. Visual only.
 import { TAU, hash32, mulberry32, mod, clamp } from '../core/math.js';
-import { loopSlow, score } from '../core/state.js';
+import { loopSlow, rateSpeed, score } from '../core/state.js';
 import { NEON_W, speedN } from '../core/stroke.js';
 import { buildShape, capsAlong } from './shapes.js';
 import { forCopies } from '../canvas/index.js';
@@ -419,9 +419,11 @@ function claimCells(S, B) {
 }
 const FLIP = ['#00e5ff', '#ff2bd6', '#fff35c', '#ffffff'];
 // Draw one live stroke. X: the frame buffer's context, in drawing space. P: { drum, by } from pulseFrame.
-export function drawLive(X, s, S, B, now, P) {
+export function drawLive(X, s, S0, B, now0, P) {
+  // Rate (v40): everything that moves here runs on a slowed clock. Loops keep real time: their trip is already slowed.
+  const rk = rateSpeed(), S = S0 * rk, now = now0 * rk;
   const M = MATS[s.color], g = s._gl || setup(s), e = Math.min((P.by.get(s.id) || 0) + 0.5 * P.drum, 1.5);
-  const slot = Math.floor(now / 170), T = reveal(s, S, B), c = colorOf(s), tiles = score.mode === 'tiles';
+  const slot = Math.floor(now / 170), T = reveal(s, S0, B), c = colorOf(s), tiles = score.mode === 'tiles';
   g.T0 = s.head ? T - headSpan(s) : -Infinity;
   let pass;
   if (M.under) { drawUnder(X, s, g, S, T, slot, e, c); return; }

@@ -47,7 +47,6 @@ export const OPTS = {
     ['mix', 'Mixed', ic("<path d='M5 5h6M8 5v7M5 9l6 3M15 6v6h4V6zM6 15h3v4H6zM14 16l5 3M19 16l-5 3'/>")],
     ['kana', 'Katakana', ic("<path d='M5 6h14M12 6c0 7-2 10-6 13M9 11h9'/>")],
     ['digits', 'Digits', ic("<path d='M6 8l3-2v12M14 6h5l-3 5c3 0 3.5 2 3.5 3.500 0 2-1.500 3.500-5.500 3.500'/>".replace('3.500','3.5').replace('1.500','1.5').replace('5.500','5.5').replace('3.500','3.5'))],
-    ['binary', 'Ones and zeros', ic("<path d='M7 6v12'/><rect x='13' y='6' width='6' height='12' rx='3'/>")],
     ['sym', 'Symbols', ic("<path d='M6 8h5M8.5 5.500v5M14 6l5 5M19 6l-5 5M6 16h5M14 14v5h5'/>".replace('5.500','5.5'))],
   ] },
   sort: { title: 'Sort', vary: 'Threshold', def: { shape: 'down', vary: 60 }, shapes: [

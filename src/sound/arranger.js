@@ -196,7 +196,7 @@ export function arrange() {
     effectPass(cands, steps);
     const r = select(cands, BUDGET.lines * P.dens * bars, steps, true, clocked, P.swing);
     kept += r.kw; dropped += r.dw;
-    lanes.push({ role: 'lines', base, period, origin, events: r.keep, free: score.mode === 'free' });
+    lanes.push({ role: 'lines', base, period, origin, events: r.keep, free: score.mode === 'free', ...(MAP.harm && !world().legacy ? { gateBeats: 4 * MAP.harm.bars * MAP.harm.steps.length } : {}) });
   }
   if (score.inst !== 'tones' && n >= (tonal ? 2 : 1)) lanes.push(buildDrums(S, P, !tonal));
   const loops = S.filter(s => TOOL[s.tool].kind === 'anim');
@@ -280,6 +280,17 @@ export function buildDrums(list, P, solo) {
   if (X.roll) {
     // The roll: thirty-second notes up to the end of the second bar, from quiet to full. In some maps only every other time round.
     for (let q = 0; q < X.roll; q++) ev.push({ ph: (32 - (X.roll - q) / 2) / 32, piece: 1, w: pcs[1].v * (0.22 + 0.78 * (q + 1) / X.roll), s: list[0], open: false, cyc: X.rollEvery > 1 ? [X.rollEvery, X.rollEvery - 1] : undefined });
+  }
+  // v40, some maps (MAP.form): a longer drum form. The two-bar pattern is one turn; over 4 or 8 turns (8 or 16 bars)
+  // one turn loses its kick and snare (the turn before the last), and the last ends in a fill of sixteenths.
+  const Fm = world().legacy ? null : MAP.form;
+  if (Fm && ev.length) {
+    if (Fm.drop) for (const e of ev) if (e.piece < 2 && !e.cyc) e.not = [Fm.n, Fm.n - 2];
+    if (Fm.fill) for (let q = 0; q < 6; q++) if (q >= 4 || (Fm.pat >> q) & 1) {
+      const piece = (Fm.pat >> (6 + q)) & 1 ? 1 : (Fm.pat >> (2 + q)) & 1 ? 3 : 1;
+      ev.push({ ph: (26 + q) / 32, piece, w: Math.max(pcs[1].v, 0.35) * (0.5 + 0.1 * q), s: list[0], open: false, cyc: [Fm.n, Fm.n - 1] });
+    }
+    return { role: 'drums', base: 'beat', period: 8, origin: 0, events: ev, gateBeats: 8 * Fm.n };
   }
   return { role: 'drums', base: 'beat', period: 8, origin: 0, events: ev };
 }

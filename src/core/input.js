@@ -16,6 +16,9 @@ import { MATS } from '../styles/index.js';
 import { world } from '../worlds/index.js';
 
 export let cur = null, erasing = null;
+// How much the line is smoothed, 0 to 1: all the way with the Smooth lines preference; otherwise the style's own
+// built-in amount (Materials 1, Comic 0.35), or none
+const smoothAmt = () => prefs.smooth !== false ? 1 : world().render.smooth === true ? 1 : world().render.smooth || 0;
 export function toScreen(e) {
   const r = cv.getBoundingClientRect(), k = cv.width / r.width;
   let x = (e.clientX - r.left - r.width / 2) * k / geo.R, y = (e.clientY - r.top - r.height / 2) * k / geo.R;
@@ -33,7 +36,7 @@ export function unrot(v) {
 export const pressureOf = e => e.pointerType === 'pen' ? (e.pressure || 0.5) : 0.5;
 export function addPoint(e) {
   const p = unrot(toScreen(e)), t = Math.max(e.timeStamp / 1000 - cur.t0, cur.pts[cur.pts.length - 1][2]);
-  { const k = prefs.smooth === false && !world().render.smooth ? 1 : 0.25; cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
+  { const k = 1 - 0.75 * smoothAmt(); cur.sx += (p.x - cur.sx) * k; cur.sy += (p.y - cur.sy) * k; }   // Preferences: line smoothing off = the line follows the hand exactly
   const last = cur.pts[cur.pts.length - 1];
   if (Math.hypot(cur.sx - last[0], cur.sy - last[1]) > 0.003) cur.pts.push([cur.sx, cur.sy, t, pressureOf(e)]);
   hearSoFar(e.timeStamp);
@@ -90,7 +93,7 @@ export function finishStroke(e) {
   const p = unrot(toScreen(e)), last = cur.pts[cur.pts.length - 1];
   const t = Math.max(e.timeStamp / 1000 - cur.t0, last[2]);
   if (Math.hypot(p.x - last[0], p.y - last[1]) > 0.002) cur.pts.push([p.x, p.y, t, pressureOf(e)]);
-  const pts = cur.pts.length > 2 && (prefs.smooth !== false || world().render.smooth) ? smoothStroke(cur.pts, cur.size) : cur.pts;
+  const pts = cur.pts.length > 2 && smoothAmt() > 0 ? smoothStroke(cur.pts, cur.size, smoothAmt()) : cur.pts;
   const S = sessionNow();
   const s = { id: cur.sid, tool: TOOL[cur.tool].as || cur.tool, head: cur.tool === 'trace' || undefined, pt: cur.pt, color: cur.color, size: cur.size, fx: MATS[cur.color].live ? score.fx : undefined, tint: cur.tint, pts, start: S, startBeat: Math.round(beatAt(S) * 4) / 4 };
   cur = null; setLiveStroke(null);

@@ -133,10 +133,9 @@ export function syncUI() {
   $('redoBtn').disabled = !redoStack.length;
   $('clearBtn').disabled = !score.strokes.length;
   // Size keeps its corner (bottom left) in every pattern (v39: in the plain canvas it used to sit top left). The top
-  // left corner is then free there; in Glitch it holds Rate, the speed of Loop and Trace strokes. (With Tiles all four
-  // corners are taken, so Rate is not shown; its setting still applies.)
+  // left corner is then free there.
   $('pk3w').hidden = false; $('pk1w').hidden = free;
-  $('pk4w').hidden = !(free && w.tools.includes('loop'));
+  $('pk4w').hidden = !w.tools.includes('loop');   // Rate sits with the drawing tools, in every pattern (v40)
   pk1.draw(); pk2.draw(); pk3.draw(); pk4.draw(); for (const key in mixKnobs) mixKnobs[key].draw();
   drawSizeBar(); syncSound(); syncMod();
 }

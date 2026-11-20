@@ -31,3 +31,6 @@ export function checkpoint() { undoStack.push(snap()); redoStack.length = 0; if 
 // beat and to each other; with hand timing it slides smoothly from 1 to 8.
 const SLOW = [1, 1.5, 2, 3, 4, 6, 8];
 export const loopSlow = () => { const v = Math.max(1, Math.min(100, score.lrate == null ? 100 : score.lrate)), u = (100 - v) / 99; return score.timing === 'clocked' ? SLOW[Math.round(u * 6)] : Math.pow(8, u); };
+// Rate also slows everything else that moves in Glitch (tumbling, character churn, smear, jitter, the effect brushes):
+// their clock runs at this share of real time, from 1 down to 1/8
+export const rateSpeed = () => Math.pow(8, -(100 - Math.max(1, Math.min(100, score.lrate == null ? 100 : score.lrate))) / 99);
